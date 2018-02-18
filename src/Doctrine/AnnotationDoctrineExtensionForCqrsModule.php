@@ -20,7 +20,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\Assert;
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs\Doctrine
  * @author Dariusz Gafka <dgafka.mail@gmail.com>
  * @ModuleConfigurationExtensionAnnotation(moduleName="cqrsModule", requiredReferences={
- *      @RequiredReferenceAnnotation(requiredReferenceName="doctrineEntityManager")
+ *      @RequiredReferenceAnnotation(requiredReferenceName="doctrineEntityManager", description="doctrine entity manager")
  * })
  */
 class AnnotationDoctrineExtensionForCqrsModule implements AggregateRepositoryExtension
