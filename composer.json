@@ -9,7 +9,7 @@
         }
     ],
     "keywords": ["messaging", "message", "spring", "enterprise integration patterns", "cqrs", "command", "query", "separation", "handler", "bus"],
-    "description": "",
+    "description": "Provides cqrs on top of integration messaging",
     "autoload": {
         "psr-4": {
             "SimplyCodedSoftware\\IntegrationMessaging\\Cqrs\\": "src"
