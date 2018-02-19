@@ -112,14 +112,16 @@ class CqrsMessagingModule implements AnnotationConfiguration
         }
 
         foreach ($annotationMessageEndpointConfigurationFinder->findFor(AggregateAnnotation::class, CommandHandlerAnnotation::class) as $annotationRegistration) {
-            $configuration->registerMessageHandler(
-                AggregateCallingCommandHandlerBuilder::createWith(
-                    $this->moduleExtensions[0]->getRepositoryFor($annotationRegistration->getMessageEndpointClass()),
-                    $annotationRegistration->getMessageEndpointClass(),
-                    $annotationRegistration->getMethodName()
-                )
-                    ->setConsumerName($annotationRegistration->getMessageEndpointClass() . '-' . $annotationRegistration->getMethodName())
-            );
+            $messageHandlerBuilder = AggregateCallingCommandHandlerBuilder::createWith(
+                $this->moduleExtensions[0]->getRepositoryFor($annotationRegistration->getMessageEndpointClass()),
+                $annotationRegistration->getMessageEndpointClass(),
+                $annotationRegistration->getMethodName()
+            )
+                ->setConsumerName($annotationRegistration->getMessageEndpointClass() . '-' . $annotationRegistration->getMethodName());
+
+
+            $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($messageHandlerBuilder->getInputMessageChannelName()));
+            $configuration->registerMessageHandler($messageHandlerBuilder);
         }
     }
 
@@ -150,11 +152,13 @@ class CqrsMessagingModule implements AnnotationConfiguration
     private function createHandler(Configuration $configuration, AnnotationRegistration $annotationRegistration, ParameterConverterAnnotationFactory $parameterConvertAnnotationFactory, bool $requiredReply): void
     {
         $interfaceToCall = InterfaceToCall::create($annotationRegistration->getMessageEndpointClass(), $annotationRegistration->getMethodName());
+        $inputMessageChannelName = $interfaceToCall->getFirstParameterTypeHint();
         $annotation = $annotationRegistration->getAnnotation();
 
-        $messageHandlerBuilder = ServiceActivatorBuilder::create($annotationRegistration->getReferenceName(), $annotationRegistration->getMethodName())
+        $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($inputMessageChannelName));
+        $messageHandlerBuilder   = ServiceActivatorBuilder::create($annotationRegistration->getReferenceName(), $annotationRegistration->getMethodName())
             ->withRequiredReply($requiredReply)
-            ->withInputMessageChannel($interfaceToCall->getFirstParameterTypeHint())
+            ->withInputMessageChannel($inputMessageChannelName)
             ->withConsumerName($annotationRegistration->getReferenceName() . '-' . $annotationRegistration->getMethodName());
 
         $parameterConvertAnnotationFactory->configureParameterConverters($messageHandlerBuilder, $annotationRegistration->getMessageEndpointClass(), $annotationRegistration->getMethodName(), $annotation->parameterConverters);

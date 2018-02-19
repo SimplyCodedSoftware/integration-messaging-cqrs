@@ -157,7 +157,9 @@ class AggregateCallingCommandHandlerBuilder implements MessageHandlerBuilderWith
     /**
      * @param string $aggregateClassName
      * @param string $methodName
+     *
      * @throws InvalidArgumentException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     private function initialize(string $aggregateClassName, string $methodName) : void
     {
