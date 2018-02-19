@@ -26,19 +26,14 @@ class EntityManagerAggregateRepository implements AggregateRepository
 
     /**
      * EntityManagerAggregateRepository constructor.
-     * @param string $aggregateClassName
-     */
-    public function __construct(string $aggregateClassName)
-    {
-        $this->aggregateClassName = $aggregateClassName;
-    }
-
-    /**
+     *
      * @param EntityManager $entityManager
+     * @param string        $aggregateClassName
      */
-    public function withEntityManager(EntityManager $entityManager) : void
+    public function __construct(EntityManager $entityManager, string $aggregateClassName)
     {
         $this->entityManager = $entityManager;
+        $this->aggregateClassName = $aggregateClassName;
     }
 
     /**

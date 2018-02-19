@@ -26,9 +26,9 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\Assert;
 class AnnotationDoctrineExtensionForCqrsModule implements AggregateRepositoryExtension
 {
     /**
-     * @var EntityManagerAggregateRepository
+     * @var EntityManager
      */
-    private $entityManagerAggregateRepository;
+    private $entityManager;
 
     /**
      * @inheritDoc
@@ -38,7 +38,7 @@ class AnnotationDoctrineExtensionForCqrsModule implements AggregateRepositoryExt
         $entityManager = $referenceSearchService->findByReference("doctrineEntityManager");
         Assert::isSubclassOf($entityManager, EntityManager::class, "Reference to service doctrineEntityManager should resolve to " . EntityManager::class);
 
-        $this->entityManagerAggregateRepository->withEntityManager($entityManager);
+        $this->entityManager = $entityManager;
     }
 
     /**
@@ -46,9 +46,7 @@ class AnnotationDoctrineExtensionForCqrsModule implements AggregateRepositoryExt
      */
     public function getRepositoryFor(string $aggregateClassName): AggregateRepository
     {
-        $this->entityManagerAggregateRepository = new EntityManagerAggregateRepository($aggregateClassName);
-
-        return $this->entityManagerAggregateRepository;
+        return new EntityManagerAggregateRepository($this->entityManager, $aggregateClassName);
     }
 
     /**
