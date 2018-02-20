@@ -113,7 +113,7 @@ class CqrsMessagingModule implements AnnotationConfiguration
 
         foreach ($annotationMessageEndpointConfigurationFinder->findFor(AggregateAnnotation::class, CommandHandlerAnnotation::class) as $annotationRegistration) {
             $messageHandlerBuilder = AggregateCallingCommandHandlerBuilder::createWith(
-                $this->moduleExtensions[0]->getRepositoryFor($annotationRegistration->getMessageEndpointClass()),
+                $this->moduleExtensions[0]->prepareBuilder(),
                 $annotationRegistration->getMessageEndpointClass(),
                 $annotationRegistration->getMethodName()
             )

@@ -18,9 +18,9 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
 class AggregateCallingCommandHandlerBuilder implements MessageHandlerBuilderWithParameterConverters
 {
     /**
-     * @var AggregateRepository
+     * @var AggregateRepositoryBuilder
      */
-    private $aggregateRepository;
+    private $aggregateRepositoryBuilder;
     /**
      * @var string
      */
@@ -52,26 +52,27 @@ class AggregateCallingCommandHandlerBuilder implements MessageHandlerBuilderWith
 
     /**
      * AggregateCallingCommandHandlerBuilder constructor.
-     * @param AggregateRepository $aggregateRepository
-     * @param string $aggregateClassName
-     * @param string $methodName
+     *
+     * @param AggregateRepositoryBuilder $aggregateRepositoryBuilder
+     * @param string                     $aggregateClassName
+     * @param string                     $methodName
      */
-    private function __construct(AggregateRepository $aggregateRepository, string $aggregateClassName, string $methodName)
+    private function __construct(AggregateRepositoryBuilder $aggregateRepositoryBuilder, string $aggregateClassName, string $methodName)
     {
-        $this->aggregateRepository = $aggregateRepository;
-        $this->aggregateClassName = $aggregateClassName;
-        $this->methodName = $methodName;
+        $this->aggregateRepositoryBuilder = $aggregateRepositoryBuilder;
+        $this->aggregateClassName         = $aggregateClassName;
+        $this->methodName                 = $methodName;
 
         $this->initialize($this->aggregateClassName, $methodName);
     }
 
     /**
-     * @param AggregateRepository $aggregateRepository
+     * @param AggregateRepositoryBuilder $aggregateRepository
      * @param string $aggregateClassName
      * @param string $methodName
      * @return AggregateCallingCommandHandlerBuilder
      */
-    public static function createWith(AggregateRepository $aggregateRepository, string $aggregateClassName, string $methodName) : self
+    public static function createWith(AggregateRepositoryBuilder $aggregateRepository, string $aggregateClassName, string $methodName) : self
     {
         return new self($aggregateRepository, $aggregateClassName, $methodName);
     }
@@ -146,7 +147,7 @@ class AggregateCallingCommandHandlerBuilder implements MessageHandlerBuilderWith
         }
 
         return new AggregateCallingCommandHandler(
-            $this->aggregateRepository,
+            $this->aggregateRepositoryBuilder->build($this->aggregateClassName, $referenceSearchService),
             $this->aggregateClassName,
             $this->methodName,
             $parameterConverters,

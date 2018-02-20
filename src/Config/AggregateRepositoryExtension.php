@@ -4,6 +4,7 @@ namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
 use SimplyCodedSoftware\IntegrationMessaging\Config\ModuleConfigurationExtension;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 
 /**
@@ -19,8 +20,7 @@ interface AggregateRepositoryExtension extends ModuleConfigurationExtension
     public function configure(ReferenceSearchService $referenceSearchService) : void;
 
     /**
-     * @param string $aggregateClassName
-     * @return AggregateRepository
+     * @return AggregateRepositoryBuilder
      */
-    public function getRepositoryFor(string $aggregateClassName) : AggregateRepository;
+    public function prepareBuilder() : AggregateRepositoryBuilder;
 }

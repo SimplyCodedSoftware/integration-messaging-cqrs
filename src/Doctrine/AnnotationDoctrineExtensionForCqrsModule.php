@@ -10,6 +10,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Annotation\ModuleConfigurationExten
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ModuleConfigurationExtension;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\AggregateRepositoryExtension;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\RequiredReferenceAnnotation;
@@ -26,27 +27,18 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\Assert;
 class AnnotationDoctrineExtensionForCqrsModule implements AggregateRepositoryExtension
 {
     /**
-     * @var EntityManager
-     */
-    private $entityManager;
-
-    /**
      * @inheritDoc
      */
     public function configure(ReferenceSearchService $referenceSearchService): void
     {
-        $entityManager = $referenceSearchService->findByReference("doctrineEntityManager");
-        Assert::isSubclassOf($entityManager, EntityManager::class, "Reference to service doctrineEntityManager should resolve to " . EntityManager::class);
-
-        $this->entityManager = $entityManager;
     }
 
     /**
      * @inheritDoc
      */
-    public function getRepositoryFor(string $aggregateClassName): AggregateRepository
+    public function prepareBuilder(): AggregateRepositoryBuilder
     {
-        return new EntityManagerAggregateRepository($this->entityManager, $aggregateClassName);
+        return DoctrineAggregateRepositoryBuilder::create();
     }
 
     /**

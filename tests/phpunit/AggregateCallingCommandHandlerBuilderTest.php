@@ -7,6 +7,7 @@ use Fixture\CommandHandler\Aggregate\CommandWithoutAggregateIdentifier;
 use Fixture\CommandHandler\Aggregate\CreateOrderCommand;
 use Fixture\CommandHandler\Aggregate\FinishOrderCommand;
 use Fixture\CommandHandler\Aggregate\InMemoryOrderAggregateRepository;
+use Fixture\CommandHandler\Aggregate\InMemoryOrderAggregateRepositoryBuilder;
 use Fixture\CommandHandler\Aggregate\MultiplyAmountCommand;
 use Fixture\CommandHandler\Aggregate\Order;
 use PHPUnit\Framework\TestCase;
@@ -30,7 +31,7 @@ class AggregateCallingCommandHandlerBuilderTest extends TestCase
     {
         $order = Order::createWith(CreateOrderCommand::create(1, 1, "Poland"));
         $aggregateCallingCommandHandler = AggregateCallingCommandHandlerBuilder::createWith(
-            InMemoryOrderAggregateRepository::createWith([
+            InMemoryOrderAggregateRepositoryBuilder::createWith([
                 $order
             ]),
             Order::class,
@@ -51,7 +52,7 @@ class AggregateCallingCommandHandlerBuilderTest extends TestCase
     public function test_configuring_command_handler()
     {
         $aggregateCallingCommandHandler = AggregateCallingCommandHandlerBuilder::createWith(
-            InMemoryOrderAggregateRepository::createEmpty(),
+            InMemoryOrderAggregateRepositoryBuilder::createEmpty(),
             Order::class,
             "changeShippingAddress"
         );
@@ -72,7 +73,7 @@ class AggregateCallingCommandHandlerBuilderTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         AggregateCallingCommandHandlerBuilder::createWith(
-            InMemoryOrderAggregateRepository::createEmpty(),
+            InMemoryOrderAggregateRepositoryBuilder::createEmpty(),
             Order::class,
             "increaseAmount"
         );
@@ -83,7 +84,7 @@ class AggregateCallingCommandHandlerBuilderTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         AggregateCallingCommandHandlerBuilder::createWith(
-            InMemoryOrderAggregateRepository::createEmpty(),
+            InMemoryOrderAggregateRepositoryBuilder::createEmpty(),
             Order::class,
             "hasVersion"
         );
@@ -91,7 +92,7 @@ class AggregateCallingCommandHandlerBuilderTest extends TestCase
 
     public function test_creating_new_aggregate_from_factory_method()
     {
-        $aggregateRepository = InMemoryOrderAggregateRepository::createEmpty();
+        $aggregateRepository = InMemoryOrderAggregateRepositoryBuilder::createEmpty();
         $aggregateCallingCommandHandler = AggregateCallingCommandHandlerBuilder::createWith(
             $aggregateRepository,
             Order::class,
@@ -112,7 +113,7 @@ class AggregateCallingCommandHandlerBuilderTest extends TestCase
     {
         $order = Order::createWith(CreateOrderCommand::create(1, 1, "Poland"));
         $aggregateCallingCommandHandler = AggregateCallingCommandHandlerBuilder::createWith(
-            InMemoryOrderAggregateRepository::createWith([
+            InMemoryOrderAggregateRepositoryBuilder::createWith([
                 $order
             ]),
             Order::class,
@@ -135,7 +136,7 @@ class AggregateCallingCommandHandlerBuilderTest extends TestCase
     {
         $order = Order::createWith(CreateOrderCommand::create(1, 1, "Poland"));
         $aggregateCallingCommandHandler = AggregateCallingCommandHandlerBuilder::createWith(
-            InMemoryOrderAggregateRepository::createWith([
+            InMemoryOrderAggregateRepositoryBuilder::createWith([
                 $order
             ]),
             Order::class,
@@ -162,7 +163,7 @@ class AggregateCallingCommandHandlerBuilderTest extends TestCase
     public function test_throwing_exception_when_trying_to_handle_command_without_aggregate_id()
     {
         $aggregateCallingCommandHandler = AggregateCallingCommandHandlerBuilder::createWith(
-            InMemoryOrderAggregateRepository::createWith([
+            InMemoryOrderAggregateRepositoryBuilder::createWith([
                 Order::createWith(CreateOrderCommand::create(1, 1, "Poland"))
             ]),
             Order::class,
