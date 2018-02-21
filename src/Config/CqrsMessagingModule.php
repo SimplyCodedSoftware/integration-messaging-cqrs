@@ -119,6 +119,8 @@ class CqrsMessagingModule implements AnnotationConfiguration
             )
                 ->setConsumerName($annotationRegistration->getMessageEndpointClass() . '-' . $annotationRegistration->getMethodName());
 
+            $annotation = $annotationRegistration->getAnnotation();
+            $parameterConvertAnnotationFactory->configureParameterConverters($messageHandlerBuilder, $annotationRegistration->getMessageEndpointClass(), $annotationRegistration->getMethodName(), $annotation->parameterConverters);
 
             $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($messageHandlerBuilder->getInputMessageChannelName()));
             $configuration->registerMessageHandler($messageHandlerBuilder);
