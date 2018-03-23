@@ -17,4 +17,16 @@ class QueryHandlerAnnotation
      * @var array
      */
     public $parameterConverters = [];
+    /**
+     * Optional output channel for extra transformations of query handler result
+     *
+     * @var string
+     */
+    public $outputChannelName = "";
+    /**
+     * If handler has no need in query, you can add name of the class name in annotation
+     *
+     * @var string
+     */
+    public $messageClassName;
 }

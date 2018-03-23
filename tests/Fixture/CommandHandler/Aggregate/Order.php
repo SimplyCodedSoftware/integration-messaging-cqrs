@@ -104,6 +104,11 @@ class Order implements VersionAggregate
         return $this->amount;
     }
 
+    public function getAmountWithQuery(GetOrderAmountQuery $query) : int
+    {
+        return $this->amount;
+    }
+
     public function hasVersion(int $version) : bool
     {
         return $this->version == $version;

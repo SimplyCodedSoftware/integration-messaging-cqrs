@@ -14,7 +14,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\ModuleConfigurati
 use SimplyCodedSoftware\IntegrationMessaging\Config\Configuration;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateCallingCommandHandlerBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
@@ -112,18 +112,35 @@ class CqrsMessagingModule implements AnnotationConfiguration
         }
 
         foreach ($annotationMessageEndpointConfigurationFinder->findFor(AggregateAnnotation::class, CommandHandlerAnnotation::class) as $annotationRegistration) {
-            $messageHandlerBuilder = AggregateCallingCommandHandlerBuilder::createWith(
+            $aggregateMessageHandlerBuilder = AggregateMessageHandlerBuilder::createCommandHandlerWith(
                 $this->moduleExtensions[0]->prepareBuilder(),
                 $annotationRegistration->getMessageEndpointClass(),
                 $annotationRegistration->getMethodName()
-            )
-                ->setConsumerName($annotationRegistration->getMessageEndpointClass() . '-' . $annotationRegistration->getMethodName());
+            );
 
+            $this->registerAggregateMessageHandler($configuration, $aggregateMessageHandlerBuilder, $annotationRegistration, $parameterConvertAnnotationFactory);
+        }
+        foreach ($annotationMessageEndpointConfigurationFinder->findFor(AggregateAnnotation::class, QueryHandlerAnnotation::class) as $annotationRegistration) {
+            /** @var QueryHandlerAnnotation $annotation */
             $annotation = $annotationRegistration->getAnnotation();
-            $parameterConvertAnnotationFactory->configureParameterConverters($messageHandlerBuilder, $annotationRegistration->getMessageEndpointClass(), $annotationRegistration->getMethodName(), $annotation->parameterConverters);
+            if ($annotation->outputChannelName) {
+                $aggregateMessageHandlerBuilder = AggregateMessageHandlerBuilder::createQueryHandlerWithOutputChannel(
+                    $annotation->messageClassName,
+                    $this->moduleExtensions[0]->prepareBuilder(),
+                    $annotationRegistration->getMessageEndpointClass(),
+                    $annotationRegistration->getMethodName(),
+                    $annotation->outputChannelName
+                );
+            }else {
+                $aggregateMessageHandlerBuilder = AggregateMessageHandlerBuilder::createQueryHandlerWith(
+                    $annotation->messageClassName,
+                    $this->moduleExtensions[0]->prepareBuilder(),
+                    $annotationRegistration->getMessageEndpointClass(),
+                    $annotationRegistration->getMethodName()
+                );
+            }
 
-            $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($messageHandlerBuilder->getInputMessageChannelName()));
-            $configuration->registerMessageHandler($messageHandlerBuilder);
+            $this->registerAggregateMessageHandler($configuration, $aggregateMessageHandlerBuilder, $annotationRegistration, $parameterConvertAnnotationFactory);
         }
     }
 
@@ -154,8 +171,13 @@ class CqrsMessagingModule implements AnnotationConfiguration
     private function createHandler(Configuration $configuration, AnnotationRegistration $annotationRegistration, ParameterConverterAnnotationFactory $parameterConvertAnnotationFactory, bool $requiredReply): void
     {
         $interfaceToCall = InterfaceToCall::create($annotationRegistration->getMessageEndpointClass(), $annotationRegistration->getMethodName());
-        $inputMessageChannelName = $interfaceToCall->getFirstParameterTypeHint();
         $annotation = $annotationRegistration->getAnnotation();
+
+        if ($annotation instanceof QueryHandlerAnnotation && $annotation->messageClassName) {
+            $inputMessageChannelName = $annotation->messageClassName;
+        }else {
+            $inputMessageChannelName = $interfaceToCall->getFirstParameterTypeHint();
+        }
 
         $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($inputMessageChannelName));
         $messageHandlerBuilder   = ServiceActivatorBuilder::create($annotationRegistration->getReferenceName(), $annotationRegistration->getMethodName())
@@ -163,8 +185,30 @@ class CqrsMessagingModule implements AnnotationConfiguration
             ->withInputMessageChannel($inputMessageChannelName)
             ->withConsumerName($annotationRegistration->getReferenceName() . '-' . $annotationRegistration->getMethodName());
 
+        if ($annotation instanceof QueryHandlerAnnotation) {
+            $messageHandlerBuilder->withOutputChannel($annotation->outputChannelName);
+        }
+
         $parameterConvertAnnotationFactory->configureParameterConverters($messageHandlerBuilder, $annotationRegistration->getMessageEndpointClass(), $annotationRegistration->getMethodName(), $annotation->parameterConverters);
 
+        $configuration->registerMessageHandler($messageHandlerBuilder);
+    }
+
+    /**
+     * @param Configuration $configuration
+     * @param               $aggregateMessageHandlerBuilder
+     * @param               $annotationRegistration
+     * @param               $parameterConvertAnnotationFactory
+     */
+    private function registerAggregateMessageHandler(Configuration $configuration, AggregateMessageHandlerBuilder $aggregateMessageHandlerBuilder, AnnotationRegistration $annotationRegistration, ParameterConverterAnnotationFactory $parameterConvertAnnotationFactory): void
+    {
+        $messageHandlerBuilder = $aggregateMessageHandlerBuilder
+            ->setConsumerName($annotationRegistration->getMessageEndpointClass() . '-' . $annotationRegistration->getMethodName());
+
+        $annotation = $annotationRegistration->getAnnotation();
+        $parameterConvertAnnotationFactory->configureParameterConverters($messageHandlerBuilder, $annotationRegistration->getMessageEndpointClass(), $annotationRegistration->getMethodName(), $annotation->parameterConverters);
+
+        $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($messageHandlerBuilder->getInputMessageChannelName()));
         $configuration->registerMessageHandler($messageHandlerBuilder);
     }
 }

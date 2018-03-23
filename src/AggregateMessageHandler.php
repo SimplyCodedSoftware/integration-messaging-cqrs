@@ -1,7 +1,8 @@
 <?php
 
 namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs;
-use SimplyCodedSoftware\IntegrationMessaging\Channel\QueueChannel;
+
+use SimplyCodedSoftware\IntegrationMessaging\Handler\ChannelResolver;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageHandlingException;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageToParameterConverter;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Processor\MethodInvoker\MethodInvoker;
@@ -12,9 +13,9 @@ use SimplyCodedSoftware\IntegrationMessaging\MessageHandler;
 /**
  * Class AggregateRepository
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs
- * @author Dariusz Gafka <dgafka.mail@gmail.com>
+ * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  */
-class AggregateCallingCommandHandler implements MessageHandler
+class AggregateMessageHandler implements MessageHandler
 {
     /**
      * @var AggregateRepository
@@ -36,22 +37,35 @@ class AggregateCallingCommandHandler implements MessageHandler
      * @var bool
      */
     private $isFactoryMethod;
+    /**
+     * @var ChannelResolver
+     */
+    private $channelResolver;
+    /**
+     * @var string
+     */
+    private $outputChannelName;
 
     /**
      * ServiceCallToAggregateAdapter constructor.
-     * @param AggregateRepository $aggregateRepository
-     * @param string $aggregateClassName
-     * @param string $methodName
+     *
+     * @param AggregateRepository                 $aggregateRepository
+     * @param ChannelResolver                     $channelResolver
+     * @param string                              $aggregateClassName
+     * @param string                              $methodName
      * @param array|MessageToParameterConverter[] $messageToParameterConverters
-     * @param bool $isFactoryMethod
+     * @param bool                                $isFactoryMethod
+     * @param string                              $outputChannelName
      */
-    public function __construct(AggregateRepository $aggregateRepository, string $aggregateClassName, string $methodName, array $messageToParameterConverters, bool $isFactoryMethod)
+    public function __construct(AggregateRepository $aggregateRepository, ChannelResolver $channelResolver, string $aggregateClassName, string $methodName, array $messageToParameterConverters, bool $isFactoryMethod, string $outputChannelName)
     {
-        $this->aggregateRepository = $aggregateRepository;
+        $this->aggregateRepository          = $aggregateRepository;
         $this->messageToParameterConverters = $messageToParameterConverters;
-        $this->aggregateClassName = $aggregateClassName;
-        $this->methodName = $methodName;
-        $this->isFactoryMethod = $isFactoryMethod;
+        $this->aggregateClassName           = $aggregateClassName;
+        $this->methodName                   = $methodName;
+        $this->isFactoryMethod              = $isFactoryMethod;
+        $this->channelResolver = $channelResolver;
+        $this->outputChannelName = $outputChannelName;
     }
 
     /**
@@ -60,8 +74,8 @@ class AggregateCallingCommandHandler implements MessageHandler
     public function handle(Message $message): void
     {
         $commandReflection = new \ReflectionClass($message->getPayload());
-        $aggregateId = "";
-        $expectedVersion = null;
+        $aggregateId       = "";
+        $expectedVersion   = null;
         foreach ($commandReflection->getProperties() as $property) {
             if (preg_match("*AggregateIdAnnotation*", $property->getDocComment())) {
                 $property->setAccessible(true);
@@ -83,18 +97,25 @@ class AggregateCallingCommandHandler implements MessageHandler
                 ? $this->aggregateRepository->findBy($aggregateId)
                 : $this->aggregateRepository->findWithLockingBy($aggregateId, $expectedVersion);
         }
-        $methodInvoker = MethodInvoker::createWith($aggregate, $this->methodName, $this->messageToParameterConverters);
 
+        $methodInvoker = MethodInvoker::createWith($aggregate, $this->methodName, $this->messageToParameterConverters);
         try {
-            $newCreatedAggregate = $methodInvoker->processMessage($message);
-        }catch (\Throwable $e) {
+            if ($this->isFactoryMethod) {
+                $aggregate = $methodInvoker->processMessage($message);
+            } else {
+                $requestReply = RequestReplyProducer::createRequestAndReply(
+                    $this->outputChannelName,
+                    $methodInvoker,
+                    $this->channelResolver,
+                    false
+                );
+
+                $requestReply->handleWithReply($message);
+            }
+        } catch (\Throwable $e) {
             throw MessageHandlingException::fromOtherException($e, $message);
         }
 
-        if ($this->isFactoryMethod) {
-            $this->aggregateRepository->save($newCreatedAggregate);
-        }else {
-            $this->aggregateRepository->save($aggregate);
-        }
+        $this->aggregateRepository->save($aggregate);
     }
 }
