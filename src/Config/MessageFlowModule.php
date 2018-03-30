@@ -7,6 +7,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationModule;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationRegistrationService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Configuration;
+use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationObserver;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariable;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
@@ -103,6 +104,14 @@ class MessageFlowModule implements AnnotationModule
     public function getName(): string
     {
         return "messageFlowModule";
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function preConfigure(array $moduleExtensions, ConfigurationObserver $configurationObserver): void
+    {
+        return;
     }
 
     /**

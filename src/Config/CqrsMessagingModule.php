@@ -11,8 +11,10 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationRegistr
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\ModuleConfiguration\ParameterConverterAnnotationFactory;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Configuration;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationException;
+use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationObserver;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
+use SimplyCodedSoftware\IntegrationMessaging\Config\ModuleExtension;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryFactory;
@@ -107,6 +109,14 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     public function getName(): string
     {
         return self::CQRS_MODULE;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function preConfigure(array $moduleExtensions, ConfigurationObserver $configurationObserver): void
+    {
+        return;
     }
 
     /**
