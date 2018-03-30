@@ -6,18 +6,17 @@ use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageEndpointAnnotatio
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
 
 /**
- * Class CommandHandlerServiceExample
+ * Class CommandHandlerWithIncorrectConfiguration
  * @package Fixture\Annotation\CommandHandler\Service
- * @author Dariusz Gafka <dgafka.mail@gmail.com>
- * @MessageEndpointAnnotation(referenceName="serviceCommandHandlerExample")
+ * @author  Dariusz Gafka <dgafka.mail@gmail.com>
+ * @MessageEndpointAnnotation()
  */
-class CommandHandlerServiceExample
+class CommandHandlerWithNoCommandInformationConfiguration
 {
     /**
-     * @param SomeCommand $command
      * @CommandHandlerAnnotation()
      */
-    public function doAction(SomeCommand $command) : void
+    public function noAction() : void
     {
 
     }

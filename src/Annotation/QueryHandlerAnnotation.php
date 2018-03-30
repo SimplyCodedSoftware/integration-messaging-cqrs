@@ -18,15 +18,15 @@ class QueryHandlerAnnotation
      */
     public $parameterConverters = [];
     /**
+     * If handler has no need in message payload, you can add name of the class name in annotation
+     *
+     * @var string
+     */
+    public $messageClassName;
+    /**
      * Optional output channel for extra transformations of query handler result
      *
      * @var string
      */
     public $outputChannelName = "";
-    /**
-     * If handler has no need in query, you can add name of the class name in annotation
-     *
-     * @var string
-     */
-    public $messageClassName;
 }

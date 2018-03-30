@@ -6,20 +6,20 @@ use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageEndpointAnnotatio
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
 
 /**
- * Class QueryHandlerServiceExample
+ * Class QueryHandlerWithNoReturnValue
  * @package Fixture\Annotation\QueryHandler
- * @author Dariusz Gafka <dgafka.mail@gmail.com>
+ * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  * @MessageEndpointAnnotation()
  */
-class QueryHandlerServiceExample
+class QueryHandlerWithNoReturnValue
 {
     /**
      * @param SomeQuery $query
-     * @return SomeResult
+     * @return void
      * @QueryHandlerAnnotation()
      */
-    public function searchFor(SomeQuery $query) : SomeResult
+    public function searchFor(SomeQuery $query) : void
     {
-        return new SomeResult();
+        return;
     }
 }

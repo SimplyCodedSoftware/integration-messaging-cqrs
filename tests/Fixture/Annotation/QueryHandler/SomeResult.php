@@ -2,6 +2,8 @@
 
 namespace Fixture\Annotation\QueryHandler;
 
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateIdAnnotation;
+
 /**
  * Class SomeResult
  * @package Fixture\Annotation\QueryHandler
@@ -9,5 +11,9 @@ namespace Fixture\Annotation\QueryHandler;
  */
 class SomeResult
 {
-
+    /**
+     * @var string
+     * @AggregateIdAnnotation()
+     */
+    private $aggregateId;
 }

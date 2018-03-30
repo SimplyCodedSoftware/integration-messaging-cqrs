@@ -14,6 +14,7 @@ use SimplyCodedSoftware\IntegrationMessaging\MessageHandler;
  * Class AggregateRepository
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
+ * @internal
  */
 class AggregateMessageHandler implements MessageHandler
 {

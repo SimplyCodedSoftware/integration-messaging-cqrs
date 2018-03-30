@@ -3,7 +3,8 @@
 namespace Fixture\CommandHandler\Aggregate;
 
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryFactory;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\AggregateRepositoryConstructor;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 
 /**
@@ -11,7 +12,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
  * @package Fixture\CommandHandler\Aggregate
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  */
-class InMemoryOrderAggregateRepositoryBuilder implements AggregateRepositoryBuilder
+class InMemoryOrderAggregateRepositoryConstructor implements AggregateRepositoryConstructor, AggregateRepositoryFactory
 {
     /**
      * @var AggregateRepository
@@ -31,7 +32,7 @@ class InMemoryOrderAggregateRepositoryBuilder implements AggregateRepositoryBuil
     /**
      * @param array $orders
      *
-     * @return InMemoryOrderAggregateRepositoryBuilder
+     * @return InMemoryOrderAggregateRepositoryConstructor
      */
     public static function createWith(array $orders) : self
     {
@@ -46,7 +47,23 @@ class InMemoryOrderAggregateRepositoryBuilder implements AggregateRepositoryBuil
     /**
      * @inheritDoc
      */
-    public function build(string $aggregateClassName, ReferenceSearchService $referenceSearchService): AggregateRepository
+    public function canHandle(ReferenceSearchService $referenceSearchService, string $aggregateClassName): bool
+    {
+        return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getRepositoryFor(ReferenceSearchService $referenceSearchService, string $aggregateClassName): AggregateRepository
+    {
+        return $this->build($referenceSearchService, $aggregateClassName);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function build(ReferenceSearchService $referenceSearchService, string $aggregateClassName): AggregateRepository
     {
         return $this->orderAggregateRepository;
     }

@@ -17,4 +17,10 @@ class CommandHandlerAnnotation
      * @var array
      */
     public $parameterConverters = [];
+    /**
+     * If handler has no need in message payload, you can add name of the class name in annotation
+     *
+     * @var string
+     */
+    public $messageClassName;
 }
