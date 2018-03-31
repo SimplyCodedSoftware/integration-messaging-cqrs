@@ -4,6 +4,7 @@ namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageEndpointAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\MessageToPayloadParameterAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Annotation\ModuleAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationModule;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationRegistration;
@@ -32,7 +33,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
  * Class IntegrationMessagingCqrsModule
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
- * @ModuleConfigurationAnnotation()
+ * @ModuleAnnotation()
  */
 class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactory
 {
