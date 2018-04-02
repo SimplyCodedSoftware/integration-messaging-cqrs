@@ -77,7 +77,7 @@ class MessageFlowModule implements AnnotationModule
     /**
      * @inheritDoc
      */
-    public function registerWithin(Configuration $configuration, array $moduleExtensions, ConfigurationVariableRetrievingService $configurationVariableRetrievingService, ReferenceSearchService $referenceSearchService): void
+    public function prepare(Configuration $configuration, array $moduleExtensions, ConfigurationObserver $configurationObserver): void
     {
         $configuration->registerMessageHandler(
             SplitterBuilder::createWithDirectObject(
@@ -85,7 +85,7 @@ class MessageFlowModule implements AnnotationModule
                 new MessageFlowRegistrationSplitter($this->messageFlowMapper),
                 "split"
             )
-            ->withOutputChannel(self::INTEGRATION_MESSAGING_CQRS_SPLITTER_TO_ROUTER_BRIDGE)
+                ->withOutputChannel(self::INTEGRATION_MESSAGING_CQRS_SPLITTER_TO_ROUTER_BRIDGE)
         );
 
         $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(self::INTEGRATION_MESSAGING_CQRS_SPLITTER_TO_ROUTER_BRIDGE));
@@ -96,6 +96,14 @@ class MessageFlowModule implements AnnotationModule
         ]);
 
         $configuration->registerMessageHandler($messageFlowRouter);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function configure(Configuration $configuration, array $moduleExtensions, ConfigurationVariableRetrievingService $configurationVariableRetrievingService, ReferenceSearchService $referenceSearchService): void
+    {
+        return;
     }
 
     /**

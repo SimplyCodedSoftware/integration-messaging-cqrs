@@ -23,6 +23,7 @@ interface MessageFlowGateway
      * @return mixed For query handler it will return value, otherwise not
      *
      * @GatewayAnnotation(
+     *      requestChannel=MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL,
      *      parameterConverters={
      *          @ParameterToHeaderAnnotation(headerName=MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_CLASS_HEADER, parameterName="messageName"),
      *          @ParameterToPayloadAnnotation(parameterName="payload")

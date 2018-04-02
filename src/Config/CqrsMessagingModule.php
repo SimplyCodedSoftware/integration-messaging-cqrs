@@ -139,7 +139,7 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     /**
      * @inheritDoc
      */
-    public function registerWithin(Configuration $configuration, array $moduleExtensions, ConfigurationVariableRetrievingService $configurationVariableRetrievingService, ReferenceSearchService $referenceSearchService): void
+    public function prepare(Configuration $configuration, array $moduleExtensions, ConfigurationObserver $configurationObserver): void
     {
         foreach ($this->serviceCommandHandlerRegistrations as $registration) {
             $interfaceToCall = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
@@ -195,6 +195,14 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             ->registerMessageHandler(RouterBuilder::createPayloadTypeRouterByClassName(self::INTEGRATION_MESSAGING_CQRS_MESSAGE_EXECUTING_CHANNEL));
 
         $this->aggregateRepositoryConstructors = $moduleExtensions;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function configure(Configuration $configuration, array $moduleExtensions, ConfigurationVariableRetrievingService $configurationVariableRetrievingService, ReferenceSearchService $referenceSearchService): void
+    {
+        return;
     }
 
     /**

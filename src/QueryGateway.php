@@ -4,6 +4,7 @@ namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs;
 
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\GatewayAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageEndpointAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\CqrsMessagingModule;
 
 /**
  * Interface QueryGateway

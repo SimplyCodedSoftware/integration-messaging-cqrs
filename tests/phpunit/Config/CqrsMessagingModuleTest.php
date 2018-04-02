@@ -25,6 +25,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationException;
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryModuleMessaging;
 use SimplyCodedSoftware\IntegrationMessaging\Config\MessagingSystemConfiguration;
+use SimplyCodedSoftware\IntegrationMessaging\Config\NullObserver;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandler;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
@@ -215,11 +216,10 @@ class CqrsMessagingModuleTest extends TestCase
         $cqrsMessagingModule   = CqrsMessagingModule::create($annotationRegistrationService);
 
         $extendedConfiguration = $this->createMessagingSystemConfiguration();
-        $cqrsMessagingModule->registerWithin(
+        $cqrsMessagingModule->prepare(
             $extendedConfiguration,
             [],
-            InMemoryConfigurationVariableRetrievingService::createEmpty(),
-            InMemoryReferenceSearchService::createEmpty()
+            NullObserver::create()
         );
 
         return $extendedConfiguration;

@@ -9,6 +9,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\InMemoryAnnotatio
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryModuleMessaging;
 use SimplyCodedSoftware\IntegrationMessaging\Config\MessagingSystemConfiguration;
+use SimplyCodedSoftware\IntegrationMessaging\Config\NullObserver;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\MessageFlowModule;
 use SimplyCodedSoftware\IntegrationMessaging\Endpoint\EventDrivenMessageHandlerConsumerBuilderFactory;
 use SimplyCodedSoftware\IntegrationMessaging\Endpoint\PollOrThrowMessageHandlerConsumerBuilderFactory;
@@ -89,11 +90,10 @@ class MessageFlowModuleTest extends TestCase
         $cqrsMessagingModule           = MessageFlowModule::create($annotationRegistrationService);
 
         $extendedConfiguration = $this->createMessagingSystemConfiguration();
-        $cqrsMessagingModule->registerWithin(
+        $cqrsMessagingModule->prepare(
             $extendedConfiguration,
             [],
-            InMemoryConfigurationVariableRetrievingService::createEmpty(),
-            InMemoryReferenceSearchService::createEmpty()
+            NullObserver::create()
         );
 
         return $extendedConfiguration;
