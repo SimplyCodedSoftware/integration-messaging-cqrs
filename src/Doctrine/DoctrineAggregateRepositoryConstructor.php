@@ -4,6 +4,7 @@ namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs\Doctrine;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
+use SimplyCodedSoftware\IntegrationMessaging\Annotation\ModuleExtensionAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ModuleExtension;
 use SimplyCodedSoftware\IntegrationMessaging\Config\RequiredReference;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
@@ -15,6 +16,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
  * Class DoctrineAggregateRepositoryBuilder
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs\Doctrine
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
+ * @ModuleExtensionAnnotation()
  */
 class DoctrineAggregateRepositoryConstructor implements AggregateRepositoryConstructor, ModuleExtension
 {
