@@ -25,7 +25,7 @@ interface MessageFlowGateway
      * @GatewayAnnotation(
      *      requestChannel=MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL,
      *      parameterConverters={
-     *          @ParameterToHeaderAnnotation(headerName=MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_CLASS_HEADER, parameterName="messageName"),
+     *          @ParameterToHeaderAnnotation(headerName=MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_NAME_HEADER, parameterName="messageName"),
      *          @ParameterToPayloadAnnotation(parameterName="payload")
      *     }
      * )
