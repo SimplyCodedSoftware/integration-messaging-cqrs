@@ -2,6 +2,7 @@
 
 namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
+use SimplyCodedSoftware\IntegrationMessaging\Annotation\ApplicationContextAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\ModuleAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationModule;
@@ -14,6 +15,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ModuleExtension;
 use SimplyCodedSoftware\IntegrationMessaging\Config\RequiredReference;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\MessageFlowAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\MessageFlowComponentAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Processor\MethodInvoker\MessageToHeaderParameterConverterBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Router\RouterBuilder;
@@ -28,7 +30,9 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\Splitter\SplitterBuilder;
 class MessageFlowModule implements AnnotationModule
 {
     const INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL = "integration_messaging.cqrs.start_flow";
-
+    /**
+     * @internal
+     */
     const INTEGRATION_MESSAGING_CQRS_START_DEFAULT_FLOW_CHANNEL = "integration_messaging.cqrs.start_default_flow";
 
     private const INTEGRATION_MESSAGING_CQRS_SPLITTER_TO_ROUTER_BRIDGE = "integration_messaging.cqrs.splitter_to_router_bridge";
@@ -69,6 +73,15 @@ class MessageFlowModule implements AnnotationModule
                 $messageFlowClass,
                 $annotation->channelName
             );
+        }
+
+        foreach ($annotationRegistrationService->findRegistrationsFor(ApplicationContextAnnotation::class, MessageFlowComponentAnnotation::class) as $registration) {
+            $applicationContextClassName = $registration->getClassWithAnnotation();
+            $applicationContext = new $applicationContextClassName();
+
+            /** @var MessageFlowRegistration $messageFlowRegistration */
+            $messageFlowRegistration = $applicationContext->{$registration->getMethodName()}();
+            $messageFlowAnnotations[$messageFlowRegistration->getMessageName()][] = $messageFlowRegistration;
         }
 
         return new self(MessageFlowMapper::createWith($messageFlowAnnotations));

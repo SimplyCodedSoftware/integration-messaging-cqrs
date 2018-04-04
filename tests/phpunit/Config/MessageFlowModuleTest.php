@@ -2,7 +2,9 @@
 
 namespace Test\SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
+use Fixture\Annotation\MessageFlow\ExampleFlowCommandWithCustomChannel;
 use Fixture\Annotation\MessageFlow\ExampleFlowCommand;
+use Fixture\Annotation\MessageFlow\ExampleMessageFlowApplicationContextForExternalFlow;
 use PHPUnit\Framework\TestCase;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\InMemoryAnnotationRegistrationService;
@@ -10,6 +12,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryConfigurationVariabl
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryModuleMessaging;
 use SimplyCodedSoftware\IntegrationMessaging\Config\MessagingSystemConfiguration;
 use SimplyCodedSoftware\IntegrationMessaging\Config\NullObserver;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\MessageFlowComponentAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\MessageFlowModule;
 use SimplyCodedSoftware\IntegrationMessaging\Endpoint\EventDrivenMessageHandlerConsumerBuilderFactory;
 use SimplyCodedSoftware\IntegrationMessaging\Endpoint\PollOrThrowMessageHandlerConsumerBuilderFactory;
@@ -59,17 +62,75 @@ class MessageFlowModuleTest extends TestCase
         );
     }
 
+    public function test_routing_message_by_external_flow()
+    {
+        $annotationClassesToRegister = [ExampleFlowCommandWithCustomChannel::class];
+
+        $messagingSystem = $this->createMessagingSystemWithChannels($annotationClassesToRegister, [
+            SimpleMessageChannelBuilder::createQueueChannel("externalChannel")
+        ]);
+        $messagingSystem->getMessageChannelByName(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL)
+            ->send(
+                MessageBuilder::withPayload("some")
+                    ->setHeader(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_NAME_HEADER, ExampleFlowCommandWithCustomChannel::MESSAGE_NAME)
+                    ->build()
+            );
+
+        /** @var PollableChannel $externalChannel */
+        $externalChannel = $messagingSystem->getMessageChannelByName("externalChannel");
+        $this->assertEquals(
+            ExampleFlowCommandWithCustomChannel::class,
+            $externalChannel->receive()->getHeaders()->get(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_CLASS_HEADER)
+        );
+    }
+
+    public function test_routing_message_by_external_flow_from_application_context()
+    {
+        $annotationClassesToRegister = [ExampleMessageFlowApplicationContextForExternalFlow::class];
+
+        $messagingSystem = $this->createMessagingSystemWithChannels($annotationClassesToRegister, [
+            SimpleMessageChannelBuilder::createQueueChannel("externalChannel")
+        ]);
+        $messagingSystem->getMessageChannelByName(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL)
+            ->send(
+                MessageBuilder::withPayload("some")
+                    ->setHeader(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_NAME_HEADER, ExampleFlowCommandWithCustomChannel::MESSAGE_NAME)
+                    ->build()
+            );
+
+        /** @var PollableChannel $externalChannel */
+        $externalChannel = $messagingSystem->getMessageChannelByName("externalChannel");
+
+        $this->assertNotEmpty($externalChannel->receive());
+    }
+
     /**
      * @param $annotationClassesToRegister
      *
      * @return \SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem
      */
-    private function createMessagingSystem($annotationClassesToRegister): \SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem
+    private function createMessagingSystem(array $annotationClassesToRegister): \SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem
+    {
+        return $this->createMessagingSystemWithChannels($annotationClassesToRegister, []);
+    }
+
+    /**
+     * @param array $annotationClassesToRegister
+     * @param array $channelBuilders
+     *
+     * @return \SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem
+     */
+    private function createMessagingSystemWithChannels(array $annotationClassesToRegister, array $channelBuilders)
     {
         $messageFlow = $this->prepareConfiguration($annotationClassesToRegister)
             ->registerConsumerFactory(new EventDrivenMessageHandlerConsumerBuilderFactory())
             ->registerConsumerFactory(new PollOrThrowMessageHandlerConsumerBuilderFactory())
             ->registerMessageChannel(SimpleMessageChannelBuilder::createQueueChannel(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_DEFAULT_FLOW_CHANNEL));
+
+
+        foreach ($channelBuilders as $channelBuilder) {
+            $messageFlow->registerMessageChannel($channelBuilder);
+        }
 
         $messagingSystem = $messageFlow->buildMessagingSystemFromConfiguration(
             InMemoryReferenceSearchService::createEmpty(),
