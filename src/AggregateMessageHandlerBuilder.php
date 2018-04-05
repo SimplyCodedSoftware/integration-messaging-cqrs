@@ -158,6 +158,16 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
     /**
      * @inheritDoc
      */
+    public function withInputChannelName(string $inputChannelName) : self
+    {
+        $this->inputChannelName = $inputChannelName;
+
+        return $this;
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function build(ChannelResolver $channelResolver, ReferenceSearchService $referenceSearchService): MessageHandler
     {
         $interfaceToCall = InterfaceToCall::create($this->aggregateClassName, $this->methodName);

@@ -163,7 +163,7 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
 
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
             $handler        = ServiceActivatorBuilder::create($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
-            $handler->withOutputChannel($registration->getAnnotationForMethod()->outputChannelName);
+            $handler->withOutputMessageChannel($registration->getAnnotationForMethod()->outputChannelName);
             $handler->withRequiredReply(true);
 
 
