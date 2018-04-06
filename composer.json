@@ -24,7 +24,7 @@
     },
     "require": {
         "php": ">=7.1.0",
-        "simplycodedsoftware/integration-messaging": "dev-master",
+        "simplycodedsoftware/integration-messaging": "^0.4.0",
         "doctrine/orm": "^2.5"
     },
     "require-dev": {
