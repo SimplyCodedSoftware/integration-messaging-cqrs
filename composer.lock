@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "9202ee1cc8fd58c5fd6ba75ad74e2407",
+    "content-hash": "ac60153e916f275227ec376a45def902",
     "packages": [
         {
             "name": "doctrine/annotations",
@@ -1009,16 +1009,16 @@
         },
         {
             "name": "simplycodedsoftware/integration-messaging",
-            "version": "dev-master",
+            "version": "0.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SimplyCodedSoftware/integration-messaging.git",
-                "reference": "d6447bc23b503cf21c1616a2bb8e8b5757d199b1"
+                "reference": "18df8404106940afa83b2f297d066c4f29f83e34"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SimplyCodedSoftware/integration-messaging/zipball/d6447bc23b503cf21c1616a2bb8e8b5757d199b1",
-                "reference": "d6447bc23b503cf21c1616a2bb8e8b5757d199b1",
+                "url": "https://api.github.com/repos/SimplyCodedSoftware/integration-messaging/zipball/18df8404106940afa83b2f297d066c4f29f83e34",
+                "reference": "18df8404106940afa83b2f297d066c4f29f83e34",
                 "shasum": ""
             },
             "require": {
@@ -1062,7 +1062,7 @@
                 "messaging",
                 "spring"
             ],
-            "time": "2018-04-04T20:40:52+00:00"
+            "time": "2018-04-06T04:24:42+00:00"
         },
         {
             "name": "symfony/cache",
@@ -3813,9 +3813,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "simplycodedsoftware/integration-messaging": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

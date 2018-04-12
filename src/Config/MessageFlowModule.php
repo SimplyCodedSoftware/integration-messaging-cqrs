@@ -30,9 +30,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\Splitter\SplitterBuilder;
 class MessageFlowModule implements AnnotationModule
 {
     const INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL = "integration_messaging.cqrs.start_flow";
-    /**
-     * @internal
-     */
+
     const INTEGRATION_MESSAGING_CQRS_START_DEFAULT_FLOW_CHANNEL = "integration_messaging.cqrs.start_default_flow";
 
     private const INTEGRATION_MESSAGING_CQRS_SPLITTER_TO_ROUTER_BRIDGE = "integration_messaging.cqrs.splitter_to_router_bridge";
