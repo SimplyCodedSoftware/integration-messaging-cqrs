@@ -5,6 +5,7 @@ namespace Test\SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 use Fixture\Annotation\MessageFlow\ExampleFlowCommandWithCustomChannel;
 use Fixture\Annotation\MessageFlow\ExampleFlowCommand;
 use Fixture\Annotation\MessageFlow\ExampleMessageFlowApplicationContextForExternalFlow;
+use Fixture\Annotation\MessageFlow\ExampleMessageFlowWithRegex;
 use PHPUnit\Framework\TestCase;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\InMemoryAnnotationRegistrationService;
@@ -82,6 +83,50 @@ class MessageFlowModuleTest extends TestCase
             ExampleFlowCommandWithCustomChannel::class,
             $externalChannel->receive()->getHeaders()->get(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_CLASS_HEADER)
         );
+    }
+
+    public function test_routing_by_star()
+    {
+        $annotationClassesToRegister = [ExampleMessageFlowWithRegex::class];
+
+        $messagingSystem = $this->createMessagingSystemWithChannels($annotationClassesToRegister, [
+            SimpleMessageChannelBuilder::createQueueChannel("externalChannelWithRegex")
+        ]);
+        $messagingSystem->getMessageChannelByName(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL)
+            ->send(
+                MessageBuilder::withPayload("some")
+                    ->setHeader(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_NAME_HEADER, ExampleFlowCommandWithCustomChannel::MESSAGE_NAME)
+                    ->build()
+            );
+
+        /** @var PollableChannel $externalChannel */
+        $externalChannel = $messagingSystem->getMessageChannelByName("externalChannelWithRegex");
+
+        $this->assertNotEmpty($externalChannel->receive());
+    }
+
+    public function test_routing_to_multiple_flows()
+    {
+        $annotationClassesToRegister = [ExampleMessageFlowWithRegex::class, ExampleFlowCommandWithCustomChannel::class];
+
+        $messagingSystem = $this->createMessagingSystemWithChannels($annotationClassesToRegister, [
+            SimpleMessageChannelBuilder::createQueueChannel("externalChannelWithRegex"),
+            SimpleMessageChannelBuilder::createQueueChannel("externalChannel")
+        ]);
+        $messagingSystem->getMessageChannelByName(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL)
+            ->send(
+                MessageBuilder::withPayload("some")
+                    ->setHeader(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_NAME_HEADER, ExampleFlowCommandWithCustomChannel::MESSAGE_NAME)
+                    ->build()
+            );
+
+        /** @var PollableChannel $externalChannel */
+        $externalChannel = $messagingSystem->getMessageChannelByName("externalChannel");
+        $this->assertNotEmpty($externalChannel->receive());
+
+        /** @var PollableChannel $externalChannel */
+        $externalChannel = $messagingSystem->getMessageChannelByName("externalChannelWithRegex");
+        $this->assertNotEmpty($externalChannel->receive());
     }
 
     public function test_routing_message_by_external_flow_from_application_context()
