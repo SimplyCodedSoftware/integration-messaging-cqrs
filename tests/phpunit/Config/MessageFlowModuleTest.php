@@ -105,6 +105,40 @@ class MessageFlowModuleTest extends TestCase
         $this->assertNotEmpty($externalChannel->receive());
     }
 
+    public function test_not_finding_flow_when_no_star_defined_and_part_of_name_involved()
+    {
+        $this->expectException(MessageHandlingException::class);
+
+        $annotationClassesToRegister = [ExampleFlowCommandWithCustomChannel::class];
+
+        $messagingSystem = $this->createMessagingSystemWithChannels($annotationClassesToRegister, [
+            SimpleMessageChannelBuilder::createQueueChannel("externalChannel")
+        ]);
+        $messagingSystem->getMessageChannelByName(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL)
+            ->send(
+                MessageBuilder::withPayload("some")
+                    ->setHeader(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_NAME_HEADER, "external")
+                    ->build()
+            );
+    }
+
+    public function test_not_finding_when_message_name_contains_flow_name_but_is_not_equal()
+    {
+        $this->expectException(MessageHandlingException::class);
+
+        $annotationClassesToRegister = [ExampleFlowCommandWithCustomChannel::class];
+
+        $messagingSystem = $this->createMessagingSystemWithChannels($annotationClassesToRegister, [
+            SimpleMessageChannelBuilder::createQueueChannel("externalChannel")
+        ]);
+        $messagingSystem->getMessageChannelByName(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL)
+            ->send(
+                MessageBuilder::withPayload("some")
+                    ->setHeader(MessageFlowModule::INTEGRATION_MESSAGING_CQRS_MESSAGE_NAME_HEADER, "example.external.flow.not.equal")
+                    ->build()
+            );
+    }
+
     public function test_routing_to_multiple_flows()
     {
         $annotationClassesToRegister = [ExampleMessageFlowWithRegex::class, ExampleFlowCommandWithCustomChannel::class];

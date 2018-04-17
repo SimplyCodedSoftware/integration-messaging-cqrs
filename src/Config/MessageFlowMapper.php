@@ -45,13 +45,13 @@ class MessageFlowMapper
     {
         $messageFlows = [];
         foreach ($this->messageFlowRegistrations as $messageFlowName => $definedMessageFlows) {
-            if (preg_match("#{$messageFlowName}#", $messageName)) {
+            if (preg_match("#^{$messageFlowName}$#", $messageName)) {
                 $messageFlows = array_merge($messageFlows, $definedMessageFlows);
             }
         }
 
         if (!$messageFlows) {
-            throw NoMessageNameDefinedForMessageFlowException::create("No message with name {$messageName} defined in message flow. Did you remember to add MessageFlowAnnotation?");
+            throw NoMessageNameDefinedForMessageFlowException::create("No message with name {$messageName} defined in message flow. Did you remember to add MessageFlowAnnotation or register Flow via ApplicationContext?");
         }
 
         return $messageFlows;

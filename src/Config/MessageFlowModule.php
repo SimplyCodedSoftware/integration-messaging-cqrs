@@ -79,7 +79,7 @@ class MessageFlowModule implements AnnotationModule
 
             /** @var MessageFlowRegistration $messageFlowRegistration */
             $messageFlowRegistration = $applicationContext->{$registration->getMethodName()}();
-            $messageFlowAnnotations[$messageFlowRegistration->getMessageName()][] = $messageFlowRegistration;
+            $messageFlowAnnotations[str_replace("*", ".*", $messageFlowRegistration->getMessageName())][] = $messageFlowRegistration;
         }
 
         return new self(MessageFlowMapper::createWith($messageFlowAnnotations));
