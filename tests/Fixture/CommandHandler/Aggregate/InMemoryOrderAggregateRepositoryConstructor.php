@@ -26,7 +26,7 @@ class InMemoryOrderAggregateRepositoryConstructor implements AggregateRepository
      */
     private function __construct(array $orders)
     {
-        $this->orderAggregateRepository = InMemoryOrderAggregateRepository::createWith($orders);
+        $this->orderAggregateRepository = InMemoryAggregateRepository::createWith($orders);
     }
 
     /**

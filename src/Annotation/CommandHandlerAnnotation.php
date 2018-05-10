@@ -23,4 +23,8 @@ class CommandHandlerAnnotation
      * @var string
      */
     public $messageClassName;
+    /**
+     * @var array
+     */
+    public $preCallInterceptors = [];
 }

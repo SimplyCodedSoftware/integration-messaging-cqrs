@@ -10,7 +10,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateVersionMismatchExcept
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs
  * @author Dariusz Gafka <dgafka.mail@gmail.com>
  */
-class InMemoryOrderAggregateRepository implements AggregateRepository
+class InMemoryAggregateRepository implements AggregateRepository
 {
     /**
      * @var array
@@ -30,7 +30,8 @@ class InMemoryOrderAggregateRepository implements AggregateRepository
 
     /**
      * @param array $aggregates
-     * @return InMemoryOrderAggregateRepository
+     *
+     * @return InMemoryAggregateRepository
      */
     public static function createWith(array $aggregates) : self
     {
@@ -38,7 +39,7 @@ class InMemoryOrderAggregateRepository implements AggregateRepository
     }
 
     /**
-     * @return InMemoryOrderAggregateRepository
+     * @return InMemoryAggregateRepository
      */
     public static function createEmpty() : self
     {
@@ -77,8 +78,6 @@ class InMemoryOrderAggregateRepository implements AggregateRepository
      */
     public function save($aggregate): void
     {
-        /** @var Order $aggregate */
-
-        $this->aggregates[$aggregate->getOrderId()] = $aggregate;
+        $this->aggregates[$aggregate->getId()] = $aggregate;
     }
 }

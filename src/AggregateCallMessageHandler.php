@@ -2,6 +2,7 @@
 
 namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs;
 
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\CqrsMessagingModule;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ChannelResolver;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageHandlingException;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageToParameterConverter;
@@ -9,6 +10,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\Processor\MethodInvoker\Met
 use SimplyCodedSoftware\IntegrationMessaging\Handler\RequestReplyProducer;
 use SimplyCodedSoftware\IntegrationMessaging\Message;
 use SimplyCodedSoftware\IntegrationMessaging\MessageHandler;
+use SimplyCodedSoftware\IntegrationMessaging\Support\MessageBuilder;
 
 /**
  * Class AggregateRepository
@@ -16,7 +18,7 @@ use SimplyCodedSoftware\IntegrationMessaging\MessageHandler;
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  * @internal
  */
-class AggregateMessageHandler implements MessageHandler
+class AggregateCallMessageHandler implements MessageHandler
 {
     /**
      * @var AggregateRepository
@@ -74,30 +76,9 @@ class AggregateMessageHandler implements MessageHandler
      */
     public function handle(Message $message): void
     {
-        $commandReflection = new \ReflectionClass($message->getPayload());
-        $aggregateId       = "";
-        $expectedVersion   = null;
-        foreach ($commandReflection->getProperties() as $property) {
-            if (preg_match("*AggregateIdAnnotation*", $property->getDocComment())) {
-                $property->setAccessible(true);
-                $aggregateId = (string)$property->getValue($message->getPayload());
-            }
-            if (preg_match("*AggregateExpectedVersionAnnotation*", $property->getDocComment())) {
-                $property->setAccessible(true);
-                $expectedVersion = $property->getValue($message->getPayload());
-            }
-        }
-
-        $aggregate = $this->aggregateClassName;
-        if (!$this->isFactoryMethod) {
-            if (!$aggregateId) {
-                throw AggregateNotFoundException::create("There is no aggregate id to search for found. Are you sure you defined AggregateId Annotation?");
-            }
-
-            $aggregate = is_null($expectedVersion)
-                ? $this->aggregateRepository->findBy($aggregateId)
-                : $this->aggregateRepository->findWithLockingBy($aggregateId, $expectedVersion);
-        }
+        $aggregate = $message->getHeaders()->containsKey(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_HEADER)
+                        ? $message->getHeaders()->get(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_HEADER)
+                        : $message->getHeaders()->get(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_CLASS_NAME_HEADER);
 
         $methodInvoker = MethodInvoker::createWith($aggregate, $this->methodName, $this->messageToParameterConverters);
         try {

@@ -3,6 +3,7 @@
 namespace Test\SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
 use Fixture\Annotation\CommandHandler\Aggregate\AggregateCommandHandlerExample;
+use Fixture\Annotation\CommandHandler\Aggregate\AggregateCommandHandlerWithInterceptorExample;
 use Fixture\Annotation\CommandHandler\Aggregate\DoStuffCommand;
 use Fixture\Annotation\CommandHandler\Service\CommandHandlerServiceExample;
 use Fixture\Annotation\CommandHandler\Service\CommandHandlerServiceWithCommandDefinedInAnnotation;
@@ -26,7 +27,8 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryConfigurationVariabl
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryModuleMessaging;
 use SimplyCodedSoftware\IntegrationMessaging\Config\MessagingSystemConfiguration;
 use SimplyCodedSoftware\IntegrationMessaging\Config\NullObserver;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandler;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateCallMessageHandler;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\CqrsMessagingModule;
@@ -178,6 +180,26 @@ class CqrsMessagingModuleTest extends TestCase
 
         $this->createModuleAndAssertConfiguration([
             AggregateQueryHandlerWithOutputChannelExample::class
+        ], $expectedConfiguration);
+    }
+
+    public function test_registering_aggregate_command_handler_with_channel_interceptors()
+    {
+        $commandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(DoStuffCommand::class, AggregateCommandHandlerWithInterceptorExample::class, "interceptedCommand")
+            ->withOutputChannelName("nullChannel")
+            ->withPreCallInterceptors([
+                CallInterceptor::create("some", "action", [
+                    MessageToPayloadParameterConverterBuilder::create("command")
+                ])
+            ]);
+        $commandHandler->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("stuffCommand")]);
+
+        $expectedConfiguration = $this->createMessagingSystemConfiguration()
+            ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(DoStuffCommand::class))
+            ->registerMessageHandler($commandHandler);
+
+        $this->createModuleAndAssertConfiguration([
+            AggregateCommandHandlerWithInterceptorExample::class
         ], $expectedConfiguration);
     }
 

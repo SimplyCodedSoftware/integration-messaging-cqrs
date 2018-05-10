@@ -15,7 +15,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationException;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationObserver;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
-use SimplyCodedSoftware\IntegrationMessaging\Config\ModuleExtension;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryFactory;
@@ -37,8 +37,16 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
  */
 class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactory
 {
-    const INTEGRATION_MESSAGING_CQRS_MESSAGE_EXECUTING_CHANNEL = "integration_messaging.cqrs.execute_message";
-    const CQRS_MODULE                                          = "cqrsModule";
+    const INTEGRATION_MESSAGING_CQRS_MESSAGE_EXECUTING_CHANNEL          = "integration_messaging.cqrs.execute_message";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_HEADER                   = "integration_messaging.cqrs.aggregate";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_CLASS_NAME_HEADER        = "integration_messaging.cqrs.aggregate.class_name";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_METHOD_HEADER            = "integration_messaging.cqrs.aggregate.method";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_REPOSITORY_HEADER            = "integration_messaging.cqrs.aggregate.repository";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_IS_FACTORY_METHOD_HEADER = "integration_messaging.cqrs.aggregate.is_factory_method";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_ID_HEADER                = "integration_messaging.cqrs.aggregate.id";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_EXPECTED_VERSION_HEADER  = "integration_messaging.cqrs.aggregate.expected_version";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_MESSAGE_HEADER  = "integration_messaging.cqrs.aggregate.calling_message";
+    const CQRS_MODULE                                                   = "cqrsModule";
 
     /**
      * @var ParameterConverterAnnotationFactory
@@ -70,10 +78,10 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
      * CqrsMessagingModule constructor.
      *
      * @param ParameterConverterAnnotationFactory $parameterConverterAnnotationFactory
-     * @param AnnotationRegistration[]                               $serviceCommandHandlerRegistrations
-     * @param AnnotationRegistration[]                               $serviceQueryHandlerRegistrations
-     * @param AnnotationRegistration[]                               $aggregateCommandHandlerRegistrations
-     * @param AnnotationRegistration[]                               $aggregateQueryHandlerRegistrations
+     * @param AnnotationRegistration[]            $serviceCommandHandlerRegistrations
+     * @param AnnotationRegistration[]            $serviceQueryHandlerRegistrations
+     * @param AnnotationRegistration[]            $aggregateCommandHandlerRegistrations
+     * @param AnnotationRegistration[]            $aggregateQueryHandlerRegistrations
      */
     private function __construct(
         ParameterConverterAnnotationFactory $parameterConverterAnnotationFactory,
@@ -83,11 +91,11 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         array $aggregateQueryHandlerRegistrations
     )
     {
-        $this->parameterConverterAnnotationFactory = $parameterConverterAnnotationFactory;
-        $this->serviceCommandHandlerRegistrations = $serviceCommandHandlerRegistrations;
-        $this->serviceQueryHandlerRegistrations = $serviceQueryHandlerRegistrations;
+        $this->parameterConverterAnnotationFactory  = $parameterConverterAnnotationFactory;
+        $this->serviceCommandHandlerRegistrations   = $serviceCommandHandlerRegistrations;
+        $this->serviceQueryHandlerRegistrations     = $serviceQueryHandlerRegistrations;
         $this->aggregateCommandHandlerRegistrations = $aggregateCommandHandlerRegistrations;
-        $this->aggregateQueryHandlerRegistrations = $aggregateQueryHandlerRegistrations;
+        $this->aggregateQueryHandlerRegistrations   = $aggregateQueryHandlerRegistrations;
     }
 
     /**
@@ -149,7 +157,7 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             }
 
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
-            $handler        = ServiceActivatorBuilder::create($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
+            $handler                 = ServiceActivatorBuilder::create($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
 
             $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
         }
@@ -162,7 +170,7 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             }
 
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
-            $handler        = ServiceActivatorBuilder::create($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
+            $handler                 = ServiceActivatorBuilder::create($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
             $handler->withOutputMessageChannel($registration->getAnnotationForMethod()->outputChannelName);
             $handler->withRequiredReply(true);
 
@@ -172,16 +180,26 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         }
 
         foreach ($this->aggregateCommandHandlerRegistrations as $registration) {
-            $interfaceToCall = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
+            $interfaceToCall         = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
 
             $handler = AggregateMessageHandlerBuilder::createCommandHandlerWith($inputMessageChannelName, $registration->getClassWithAnnotation(), $registration->getMethodName());
+
+            /** @var CommandHandlerAnnotation $annotationForMethod */
+            $annotationForMethod = $registration->getAnnotationForMethod();
+            $preCallInterceptors = [];
+            foreach ($annotationForMethod->preCallInterceptors as $preCallInterceptor) {
+                $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $preCallInterceptor->parameterConverters);
+
+                $preCallInterceptors[] = CallInterceptor::create($preCallInterceptor->referenceName, $preCallInterceptor->methodName, $parameterConverters);
+            }
+            $handler->withPreCallInterceptors($preCallInterceptors);
 
             $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
         }
 
         foreach ($this->aggregateQueryHandlerRegistrations as $registration) {
-            $interfaceToCall = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
+            $interfaceToCall         = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
 
             $handler = AggregateMessageHandlerBuilder::createQueryHandlerWith($inputMessageChannelName, $registration->getClassWithAnnotation(), $registration->getMethodName());
@@ -195,22 +213,6 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             ->registerMessageHandler(RouterBuilder::createPayloadTypeRouterByClassName(self::INTEGRATION_MESSAGING_CQRS_MESSAGE_EXECUTING_CHANNEL));
 
         $this->aggregateRepositoryConstructors = $moduleExtensions;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function configure(Configuration $configuration, array $moduleExtensions, ConfigurationVariableRetrievingService $configurationVariableRetrievingService, ReferenceSearchService $referenceSearchService): void
-    {
-        return;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function postConfigure(ConfiguredMessagingSystem $configuredMessagingSystem): void
-    {
-        return;
     }
 
     /**
@@ -234,6 +236,20 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         }
 
         return $interfaceToCall->getFirstParameterTypeHint();
+    }
+
+    /**
+     * @param Configuration $configuration
+     * @param               $interfaceToCall
+     * @param               $handler
+     * @param               $registration
+     * @param               $inputMessageChannelName
+     */
+    private function registerChannelAndHandler(Configuration $configuration, InterfaceToCall $interfaceToCall, MessageHandlerBuilderWithParameterConverters $handler, AnnotationRegistration $registration, string $inputMessageChannelName): void
+    {
+        $this->configureMessageParametersFor($interfaceToCall, $handler, $registration);
+        $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($inputMessageChannelName));
+        $configuration->registerMessageHandler($handler);
     }
 
     /**
@@ -266,6 +282,22 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     /**
      * @inheritDoc
      */
+    public function configure(Configuration $configuration, array $moduleExtensions, ConfigurationVariableRetrievingService $configurationVariableRetrievingService, ReferenceSearchService $referenceSearchService): void
+    {
+        return;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function postConfigure(ConfiguredMessagingSystem $configuredMessagingSystem): void
+    {
+        return;
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function getRepositoryFor(ReferenceSearchService $referenceSearchService, string $aggregateClassName): AggregateRepository
     {
         foreach ($this->aggregateRepositoryConstructors as $aggregateRepositoryConstructor) {
@@ -275,19 +307,5 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         }
 
         throw new InvalidArgumentException("No suitable aggregate repository for {$aggregateClassName}. Have you registered your aggregate?");
-    }
-
-    /**
-     * @param Configuration $configuration
-     * @param               $interfaceToCall
-     * @param               $handler
-     * @param               $registration
-     * @param               $inputMessageChannelName
-     */
-    private function registerChannelAndHandler(Configuration $configuration, InterfaceToCall $interfaceToCall, MessageHandlerBuilderWithParameterConverters $handler, AnnotationRegistration $registration, string $inputMessageChannelName): void
-    {
-        $this->configureMessageParametersFor($interfaceToCall, $handler, $registration);
-        $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($inputMessageChannelName));
-        $configuration->registerMessageHandler($handler);
     }
 }

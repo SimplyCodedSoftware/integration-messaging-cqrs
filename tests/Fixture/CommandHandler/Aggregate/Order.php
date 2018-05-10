@@ -91,7 +91,7 @@ class Order implements VersionAggregate
     /**
      * @return int
      */
-    public function getOrderId() : int
+    public function getId() : int
     {
         return $this->orderId;
     }

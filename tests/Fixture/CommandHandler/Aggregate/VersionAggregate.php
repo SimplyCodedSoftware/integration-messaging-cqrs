@@ -12,5 +12,10 @@ interface VersionAggregate
     /**
      * @return int
      */
+    public function getId(): int;
+
+    /**
+     * @return int
+     */
     public function getVersion() : int;
 }

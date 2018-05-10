@@ -29,4 +29,8 @@ class QueryHandlerAnnotation
      * @var string
      */
     public $outputChannelName = "";
+    /**
+     * @var array
+     */
+    public $preCallInterceptors = [];
 }

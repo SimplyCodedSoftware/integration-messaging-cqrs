@@ -3,6 +3,8 @@
 namespace Fixture\Annotation\CommandHandler\Aggregate;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CallInterceptorAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\MessageToPayloadParameterAnnotation;
 
 /**
  * Class AggregateCommandHandlerExample
