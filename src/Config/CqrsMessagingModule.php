@@ -37,15 +37,15 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
  */
 class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactory
 {
-    const INTEGRATION_MESSAGING_CQRS_MESSAGE_EXECUTING_CHANNEL          = "integration_messaging.cqrs.execute_message";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_HEADER                   = "integration_messaging.cqrs.aggregate";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_CLASS_NAME_HEADER        = "integration_messaging.cqrs.aggregate.class_name";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_METHOD_HEADER            = "integration_messaging.cqrs.aggregate.method";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_REPOSITORY_HEADER            = "integration_messaging.cqrs.aggregate.repository";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_IS_FACTORY_METHOD_HEADER = "integration_messaging.cqrs.aggregate.is_factory_method";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_ID_HEADER                = "integration_messaging.cqrs.aggregate.id";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_EXPECTED_VERSION_HEADER  = "integration_messaging.cqrs.aggregate.expected_version";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_MESSAGE_HEADER  = "integration_messaging.cqrs.aggregate.calling_message";
+    const INTEGRATION_MESSAGING_CQRS_MESSAGE_EXECUTING_CHANNEL          = "cqrs.execute_message";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_HEADER                   = "cqrs.aggregate";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_CLASS_NAME_HEADER        = "cqrs.aggregate.class_name";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_METHOD_HEADER            = "cqrs.aggregate.method";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_REPOSITORY_HEADER            = "cqrs.aggregate.repository";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_IS_FACTORY_METHOD_HEADER = "cqrs.aggregate.is_factory_method";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_ID_HEADER                = "cqrs.aggregate.id";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_EXPECTED_VERSION_HEADER  = "cqrs.aggregate.expected_version";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_MESSAGE_HEADER  = "cqrs.aggregate.calling_message";
     const CQRS_MODULE                                                   = "cqrsModule";
 
     /**
