@@ -159,6 +159,10 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
 
         $this->preSendInterceptors = $interceptors;
 
+        foreach ($interceptors as $interceptor) {
+            $this->registerRequiredReference($interceptor->getReferenceName());
+        }
+
         return $this;
     }
 
