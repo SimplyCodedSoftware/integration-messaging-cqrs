@@ -71,7 +71,7 @@ class CallAggregateService
             throw MessageHandlingException::fromOtherException($e, $message);
         }
 
-        if ($result) {
+        if (!is_null($result)) {
             $resultMessage = $resultMessage
                 ->setPayload($result);
         }
