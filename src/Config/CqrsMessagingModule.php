@@ -225,8 +225,9 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
      */
     private function getInputMessageChannel(InterfaceToCall $interfaceToCall, AnnotationRegistration $annotation): string
     {
-        if ($interfaceToCall->hasNoParameters()) {
-            $inputChannel = $annotation->getAnnotationForMethod()->messageClassName;
+        $messageClassName = $annotation->getAnnotationForMethod()->messageClassName;
+        if ($messageClassName) {
+            $inputChannel = $messageClassName;
 
             if (!$inputChannel) {
                 throw ConfigurationException::create("{$interfaceToCall} has no information about command. Did you forget to typehint or add annotation?");
@@ -267,9 +268,12 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
 
         $methodAnnotation                = $annotationRegistration->getAnnotationForMethod();
         $parameterConverterAnnotations   = isset($methodAnnotation->parameterConverters) ? $methodAnnotation->parameterConverters : [];
-        $messageParameter                = new MessageToPayloadParameterAnnotation();
-        $messageParameter->parameterName = $interfaceToCall->getFirstParameterName();
-        array_unshift($parameterConverterAnnotations, $messageParameter);
+
+        if (!$annotationRegistration->getAnnotationForMethod()->messageClassName) {
+            $messageParameter                = new MessageToPayloadParameterAnnotation();
+            $messageParameter->parameterName = $interfaceToCall->getFirstParameterName();
+            array_unshift($parameterConverterAnnotations, $messageParameter);
+        }
 
         $this->parameterConverterAnnotationFactory->configureParameterConverters(
             $messageHandlerBuilderWithParameterConverters,

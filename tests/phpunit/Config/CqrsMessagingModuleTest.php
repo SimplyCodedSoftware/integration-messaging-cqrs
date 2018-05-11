@@ -15,6 +15,7 @@ use Fixture\Annotation\CommandHandler\Service\SomeCommand;
 use Fixture\Annotation\QueryHandler\AggregateQueryHandlerExample;
 use Fixture\Annotation\QueryHandler\AggregateQueryHandlerWithOutputChannelExample;
 use Fixture\Annotation\QueryHandler\QueryHandlerServiceExample;
+use Fixture\Annotation\QueryHandler\QueryHandlerServiceWithClassMetadataDefined;
 use Fixture\Annotation\QueryHandler\QueryHandlerWithNoReturnValue;
 use Fixture\Annotation\QueryHandler\SomeQuery;
 use PHPUnit\Framework\TestCase;
@@ -38,6 +39,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\Processor\MethodInvoker\Mes
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Processor\MethodInvoker\MessageToReferenceServiceParameterConverterBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Router\RouterBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ServiceActivator\ServiceActivatorBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
 
 /**
  * Class IntegrationMessagingCqrsModule
@@ -101,7 +103,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_throwing_configuration_exception_if_command_handler_has_no_information_about_command()
     {
-        $this->expectException(ConfigurationException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         $this->prepareConfiguration([
             CommandHandlerWithNoCommandInformationConfiguration::class
@@ -128,6 +130,20 @@ class CqrsMessagingModuleTest extends TestCase
 
         $this->createModuleAndAssertConfiguration([
             QueryHandlerServiceExample::class
+        ], $expectedConfiguration);
+    }
+
+    public function test_registering_service_query_handler_with_class_metadata_defined()
+    {
+        $serviceActivator = ServiceActivatorBuilder::create(SomeQuery::class, QueryHandlerServiceWithClassMetadataDefined::class, "searchFor")
+            ->withRequiredReply(true);
+        $serviceActivator->withMethodParameterConverters([MessageToHeaderParameterConverterBuilder::create("personId", "currentUserId")]);
+        $expectedConfiguration = $this->createMessagingSystemConfiguration()
+            ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(SomeQuery::class))
+            ->registerMessageHandler($serviceActivator);
+
+        $this->createModuleAndAssertConfiguration([
+            QueryHandlerServiceWithClassMetadataDefined::class
         ], $expectedConfiguration);
     }
 
