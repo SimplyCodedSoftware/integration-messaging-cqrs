@@ -11,7 +11,7 @@ use Doctrine\Common\Annotations\Annotation\Target;
  * @Annotation
  * @Target({"METHOD"})
  */
-class CommandHandlerAnnotation
+class CommandHandlerAnnotation extends WithInterceptors
 {
     /**
      * @var array
@@ -23,12 +23,4 @@ class CommandHandlerAnnotation
      * @var string
      */
     public $messageClassName;
-    /**
-     * @var array
-     */
-    public $preCallInterceptors = [];
-    /**
-     * @var array
-     */
-    public $postCallInterceptors = [];
 }

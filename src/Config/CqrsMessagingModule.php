@@ -18,6 +18,9 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryFactory;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CallInterceptorAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ClassFactoryMethodInterceptorAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ClassMethodInterceptorAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
@@ -26,6 +29,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\InterfaceToCall;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageHandlerBuilderWithParameterConverters;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Router\RouterBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Support\Assert;
 use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
 
 /**
@@ -72,6 +76,10 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
      * @var AnnotationRegistration[]
      */
     private $aggregateQueryHandlerRegistrations;
+    /**
+     * @var array|ClassMethodInterceptorAnnotation[]
+     */
+    private $classLevelInterceptorAnnotations;
 
     /**
      * CqrsMessagingModule constructor.
@@ -81,13 +89,15 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
      * @param AnnotationRegistration[]            $serviceQueryHandlerRegistrations
      * @param AnnotationRegistration[]            $aggregateCommandHandlerRegistrations
      * @param AnnotationRegistration[]            $aggregateQueryHandlerRegistrations
+     * @param ClassMethodInterceptorAnnotation[]  $classLevelInterceptorAnnotations
      */
     private function __construct(
         ParameterConverterAnnotationFactory $parameterConverterAnnotationFactory,
         array $serviceCommandHandlerRegistrations,
         array $serviceQueryHandlerRegistrations,
         array $aggregateCommandHandlerRegistrations,
-        array $aggregateQueryHandlerRegistrations
+        array $aggregateQueryHandlerRegistrations,
+        array $classLevelInterceptorAnnotations
     )
     {
         $this->parameterConverterAnnotationFactory  = $parameterConverterAnnotationFactory;
@@ -95,6 +105,7 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         $this->serviceQueryHandlerRegistrations     = $serviceQueryHandlerRegistrations;
         $this->aggregateCommandHandlerRegistrations = $aggregateCommandHandlerRegistrations;
         $this->aggregateQueryHandlerRegistrations   = $aggregateQueryHandlerRegistrations;
+        $this->classLevelInterceptorAnnotations = $classLevelInterceptorAnnotations;
     }
 
     /**
@@ -102,12 +113,18 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
      */
     public static function create(AnnotationRegistrationService $annotationRegistrationService): AnnotationModule
     {
+        $classLevelInterceptorAnnotations = [];
+        foreach ($annotationRegistrationService->getAllClassesWithAnnotation(ClassMethodInterceptorAnnotation::class) as $className) {
+            $classLevelInterceptorAnnotations[$className] = $annotationRegistrationService->getAnnotationForClass($className, ClassMethodInterceptorAnnotation::class);
+        }
+
         return new self(
             ParameterConverterAnnotationFactory::create(),
             $annotationRegistrationService->findRegistrationsFor(MessageEndpointAnnotation::class, CommandHandlerAnnotation::class),
             $annotationRegistrationService->findRegistrationsFor(MessageEndpointAnnotation::class, QueryHandlerAnnotation::class),
             $annotationRegistrationService->findRegistrationsFor(AggregateAnnotation::class, CommandHandlerAnnotation::class),
-            $annotationRegistrationService->findRegistrationsFor(AggregateAnnotation::class, QueryHandlerAnnotation::class)
+            $annotationRegistrationService->findRegistrationsFor(AggregateAnnotation::class, QueryHandlerAnnotation::class),
+            $classLevelInterceptorAnnotations
         );
     }
 
@@ -210,8 +227,8 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     private function registerChannelAndHandler(Configuration $configuration, InterfaceToCall $interfaceToCall, CqrsMessageHandlerBuilder $handler, AnnotationRegistration $registration, string $inputMessageChannelName): void
     {
         $this->configureMessageParametersFor($interfaceToCall, $handler, $registration);
-        $this->registerPreCallInterceptors($registration, $handler);
-        $this->registerPostCallInterceptors($registration, $handler);
+        $handler->withPreCallInterceptors($this->createCallInterceptorsFor($registration, $interfaceToCall->getMethodName(), $handler, $registration->getAnnotationForMethod()->preCallInterceptors, true));
+        $handler->withPostCallInterceptors($this->createCallInterceptorsFor($registration, $interfaceToCall->getMethodName(), $handler, $registration->getAnnotationForMethod()->postCallInterceptors, false));
 
         $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($inputMessageChannelName));
         $configuration->registerMessageHandler($handler);
@@ -248,35 +265,37 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     }
 
     /**
-     * @param $registration
-     * @param $handler
+     * @param AnnotationRegistration    $registration
+     * @param string                    $methodName
+     * @param CqrsMessageHandlerBuilder $handler
+     * @param array                     $callInterceptorAnnotations
+     * @param bool                      $isPreCallInterceptor
+     *
+     * @return array
      */
-    private function registerPreCallInterceptors(AnnotationRegistration $registration, CqrsMessageHandlerBuilder $handler): void
+    private function createCallInterceptorsFor(AnnotationRegistration $registration, string $methodName, CqrsMessageHandlerBuilder $handler, array $callInterceptorAnnotations, bool $isPreCallInterceptor): array
     {
-        $annotationForMethod = $registration->getAnnotationForMethod();
-        $preCallInterceptors = [];
-        foreach ($annotationForMethod->preCallInterceptors as $preCallInterceptor) {
-            $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $preCallInterceptor->parameterConverters);
+        $callInterceptors = [];
+        if (array_key_exists($registration->getClassWithAnnotation(), $this->classLevelInterceptorAnnotations)) {
+            $classMethodInterceptorAnnotation = $this->classLevelInterceptorAnnotations[$registration->getClassWithAnnotation()];
 
-            $preCallInterceptors[] = CallInterceptor::create($preCallInterceptor->referenceName, $preCallInterceptor->methodName, $parameterConverters);
+            if (!in_array($methodName, $classMethodInterceptorAnnotation->excludedMethods)) {
+                if ($isPreCallInterceptor) {
+                    foreach ($classMethodInterceptorAnnotation->preCallInterceptors as $callInterceptor) {
+                        $callInterceptors[] = $this->createCallInterceptor($registration, $handler, $callInterceptor);
+                    }
+                }else {
+                    foreach ($classMethodInterceptorAnnotation->postCallInterceptors as $callInterceptor) {
+                        $callInterceptors[] = $this->createCallInterceptor($registration, $handler, $callInterceptor);
+                    }
+                }
+            }
         }
-        $handler->withPreCallInterceptors($preCallInterceptors);
-    }
 
-    /**
-     * @param $registration
-     * @param $handler
-     */
-    private function registerPostCallInterceptors(AnnotationRegistration $registration, CqrsMessageHandlerBuilder $handler): void
-    {
-        $annotationForMethod = $registration->getAnnotationForMethod();
-        $postCallInterceptors = [];
-        foreach ($annotationForMethod->postCallInterceptors as $preCallInterceptor) {
-            $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $preCallInterceptor->parameterConverters);
-
-            $postCallInterceptors[] = CallInterceptor::create($preCallInterceptor->referenceName, $preCallInterceptor->methodName, $parameterConverters);
+        foreach ($callInterceptorAnnotations as $interceptorAnnotation) {
+            $callInterceptors[] = $this->createCallInterceptor($registration, $handler, $interceptorAnnotation);
         }
-        $handler->withPostCallInterceptors($postCallInterceptors);
+        return $callInterceptors;
     }
 
     /**
@@ -345,5 +364,22 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         }
 
         return array($interfaceToCall, $inputMessageChannelName);
+    }
+
+    /**
+     * @param AnnotationRegistration    $registration
+     * @param CqrsMessageHandlerBuilder $handler
+     * @param                           $interceptorAnnotation
+     *
+     * @return CallInterceptor
+     */
+    private function createCallInterceptor(AnnotationRegistration $registration, CqrsMessageHandlerBuilder $handler, $interceptorAnnotation): CallInterceptor
+    {
+        \assert($interceptorAnnotation instanceof CallInterceptorAnnotation, "Interceptor must be of class " . CallInterceptorAnnotation::class);
+        $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $interceptorAnnotation->parameterConverters);
+
+        $callInterceptor = CallInterceptor::create($interceptorAnnotation->referenceName, $interceptorAnnotation->methodName, $parameterConverters);
+
+        return $callInterceptor;
     }
 }

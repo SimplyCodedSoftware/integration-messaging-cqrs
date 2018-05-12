@@ -3,7 +3,10 @@
 namespace Test\SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
 use Fixture\Annotation\CommandHandler\Aggregate\AggregateCommandHandlerExample;
+use Fixture\Annotation\CommandHandler\Aggregate\AggregateCommandHandlerWithClassLevelMethodsInterceptorAndOnlyFactoryMethodExample;
+use Fixture\Annotation\CommandHandler\Aggregate\AggregateCommandHandlerWithClassLevelMethodAndExclusionInterceptorExample;
 use Fixture\Annotation\CommandHandler\Aggregate\AggregateCommandHandlerWithPostCallInterceptorExample;
+use Fixture\Annotation\CommandHandler\Aggregate\AggregateCommandHandlerWithClassLevelMethodsInterceptorExample;
 use Fixture\Annotation\CommandHandler\Aggregate\AggregateCommandHandlerWithPreCallInterceptorExample;
 use Fixture\Annotation\CommandHandler\Aggregate\DoStuffCommand;
 use Fixture\Annotation\CommandHandler\Service\CommandHandlerServiceExample;
@@ -235,6 +238,46 @@ class CqrsMessagingModuleTest extends TestCase
 
         $this->createModuleAndAssertConfiguration([
             AggregateCommandHandlerWithPostCallInterceptorExample::class
+        ], $expectedConfiguration);
+    }
+
+    public function test_registering_aggregate_command_handler_with_pre_and_post_class_call_interceptors()
+    {
+        $commandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(DoStuffCommand::class, AggregateCommandHandlerWithClassLevelMethodsInterceptorExample::class, "interceptedCommand")
+            ->withOutputMessageChannel("nullChannel")
+            ->withPreCallInterceptors([
+                CallInterceptor::create("some", "action", [
+                    MessageToPayloadParameterConverterBuilder::create("command")
+                ])
+            ])
+            ->withPostCallInterceptors([
+                CallInterceptor::create("some", "action", [
+                    MessageToPayloadParameterConverterBuilder::create("command")
+                ])
+            ]);
+        $commandHandler->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("stuffCommand")]);
+
+        $expectedConfiguration = $this->createMessagingSystemConfiguration()
+            ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(DoStuffCommand::class))
+            ->registerMessageHandler($commandHandler);
+
+        $this->createModuleAndAssertConfiguration([
+            AggregateCommandHandlerWithClassLevelMethodsInterceptorExample::class
+        ], $expectedConfiguration);
+    }
+
+    public function test_registering_aggregate_command_handler_with_pre_and_post_class_factory_call_interceptors()
+    {
+        $commandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(DoStuffCommand::class, AggregateCommandHandlerWithClassLevelMethodAndExclusionInterceptorExample::class, "interceptedCommand")
+            ->withOutputMessageChannel("nullChannel");
+        $commandHandler->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("stuffCommand")]);
+
+        $expectedConfiguration = $this->createMessagingSystemConfiguration()
+            ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(DoStuffCommand::class))
+            ->registerMessageHandler($commandHandler);
+
+        $this->createModuleAndAssertConfiguration([
+            AggregateCommandHandlerWithClassLevelMethodAndExclusionInterceptorExample::class
         ], $expectedConfiguration);
     }
 

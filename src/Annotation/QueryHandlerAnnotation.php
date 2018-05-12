@@ -11,7 +11,7 @@ use Doctrine\Common\Annotations\Annotation\Target;
  * @Annotation
  * @Target({"METHOD"})
  */
-class QueryHandlerAnnotation
+class QueryHandlerAnnotation extends WithInterceptors
 {
     /**
      * @var array
@@ -29,12 +29,4 @@ class QueryHandlerAnnotation
      * @var string
      */
     public $outputChannelName = "";
-    /**
-     * @var array
-     */
-    public $preCallInterceptors = [];
-    /**
-     * @var array
-     */
-    public $postCallInterceptors = [];
 }
