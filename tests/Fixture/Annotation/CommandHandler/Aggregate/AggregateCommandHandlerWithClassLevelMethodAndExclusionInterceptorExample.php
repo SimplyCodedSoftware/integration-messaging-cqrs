@@ -3,11 +3,10 @@
 namespace Fixture\Annotation\CommandHandler\Aggregate;
 
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ClassFactoryMethodInterceptorAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ClassMethodInterceptorAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CallInterceptorAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\MessageToPayloadParameterAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ReferenceCallInterceptorAnnotation;
 
 /**
  * Class AggregateCommandHandlerWithInterceptorExample
@@ -16,7 +15,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\Messa
  * @AggregateAnnotation()
  * @ClassMethodInterceptorAnnotation(
  *     preCallInterceptors={
- *          @CallInterceptorAnnotation(
+ *          @ReferenceCallInterceptorAnnotation(
  *                  referenceName="some",
  *                  methodName="action",
  *                  parameterConverters={@MessageToPayloadParameterAnnotation(parameterName="command")},
@@ -24,7 +23,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\Messa
  *          )
  *     },
  *     postCallInterceptors={
- *          @CallInterceptorAnnotation(referenceName="some", methodName="action", parameterConverters={
+ *          @ReferenceCallInterceptorAnnotation(referenceName="some", methodName="action", parameterConverters={
  *              @MessageToPayloadParameterAnnotation(parameterName="command")
  *          }, excludedMethods={"interceptedCommand"})
  *    }

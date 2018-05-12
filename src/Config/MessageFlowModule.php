@@ -128,14 +128,6 @@ class MessageFlowModule implements AnnotationModule
     /**
      * @inheritDoc
      */
-    public function preConfigure(array $moduleExtensions, ConfigurationObserver $configurationObserver): void
-    {
-        return;
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function getConfigurationVariables(): array
     {
         return [];

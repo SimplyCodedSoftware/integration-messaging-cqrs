@@ -24,7 +24,7 @@ use PHPUnit\Framework\TestCase;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\QueueChannel;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\InMemoryAnnotationRegistrationService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryChannelResolver;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\ReferenceCallInterceptor;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CqrsMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateNotFoundException;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateVersionMismatchException;
@@ -250,7 +250,7 @@ class AggregateMessageHandlerBuilderTest extends TestCase
             "create"
         )
             ->withPreCallInterceptors([
-                CallInterceptor::create(NotAuthorizedToDoActionInterceptor::class, "isAuthorized", [])
+                ReferenceCallInterceptor::create(NotAuthorizedToDoActionInterceptor::class, "isAuthorized", [])
             ]);
 
         $aggregateCommandHandler = $aggregateCallingCommandHandler->build(
@@ -274,7 +274,7 @@ class AggregateMessageHandlerBuilderTest extends TestCase
             "create"
         )
             ->withPreCallInterceptors([
-                CallInterceptor::create(WrongNoReturnValueInterceptor::class, "wrongCall", [])
+                ReferenceCallInterceptor::create(WrongNoReturnValueInterceptor::class, "wrongCall", [])
             ]);
 
         $this->expectException(InvalidArgumentException::class);
@@ -300,7 +300,7 @@ class AggregateMessageHandlerBuilderTest extends TestCase
                 MessageToHeaderParameterConverterBuilder::create("ownerId", "userId")
             ])
             ->withPreCallInterceptors([
-                CallInterceptor::create(AddCurrentUserIdInterceptorExample::class, "addCurrentUserId", [])
+                ReferenceCallInterceptor::create(AddCurrentUserIdInterceptorExample::class, "addCurrentUserId", [])
             ]);
 
         $aggregateCommandHandler = $aggregateCallingCommandHandler->build(
@@ -324,7 +324,7 @@ class AggregateMessageHandlerBuilderTest extends TestCase
             "close"
         )
             ->withPreCallInterceptors([
-                CallInterceptor::create(DoNotCloseShopTwiceInterceptor::class, "doNotCloseTwice", [
+                ReferenceCallInterceptor::create(DoNotCloseShopTwiceInterceptor::class, "doNotCloseTwice", [
                     MessageToHeaderParameterConverterBuilder::create("aggregate", CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_HEADER)
                 ])
             ]);
@@ -353,10 +353,10 @@ class AggregateMessageHandlerBuilderTest extends TestCase
             "addProducts"
         )
             ->withPreCallInterceptors([
-                CallInterceptor::create(MultiplyProductsInterceptor::class, "multiply", [
+                ReferenceCallInterceptor::create(MultiplyProductsInterceptor::class, "multiply", [
                     MessageToPayloadParameterConverterBuilder::create("command")
                 ]),
-                CallInterceptor::create(MultiplyProductsInterceptor::class, "multiply", [
+                ReferenceCallInterceptor::create(MultiplyProductsInterceptor::class, "multiply", [
                     MessageToPayloadParameterConverterBuilder::create("command")
                 ])
             ]);
@@ -385,7 +385,7 @@ class AggregateMessageHandlerBuilderTest extends TestCase
             Order::class,
             "getAmountWithQuery"
         )->withPostCallInterceptors([
-            CallInterceptor::create(ChangeAmountInterceptor::class, "change", [])
+            ReferenceCallInterceptor::create(ChangeAmountInterceptor::class, "change", [])
         ]);
 
         $aggregateQueryHandler = $aggregateCallingCommandHandler->build(

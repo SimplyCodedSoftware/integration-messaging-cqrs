@@ -4,7 +4,7 @@ namespace Fixture\Annotation\CommandHandler\Aggregate;
 
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CallInterceptorAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ReferenceCallInterceptorAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\MessageToPayloadParameterAnnotation;
 
 /**
@@ -18,7 +18,7 @@ class AggregateCommandHandlerWithPreCallInterceptorExample
     /**
      * @CommandHandlerAnnotation(
      *     preCallInterceptors={
-     *          @CallInterceptorAnnotation(referenceName="some", methodName="action", parameterConverters={
+     *          @ReferenceCallInterceptorAnnotation(referenceName="some", methodName="action", parameterConverters={
      *              @MessageToPayloadParameterAnnotation(parameterName="command")
      *          })
      *    }

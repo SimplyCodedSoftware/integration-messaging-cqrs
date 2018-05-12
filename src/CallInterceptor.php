@@ -2,86 +2,27 @@
 
 namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs;
 
-use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageToParameterConverterBuilder;
-use SimplyCodedSoftware\IntegrationMessaging\Support\Assert;
+use SimplyCodedSoftware\IntegrationMessaging\Handler\ChannelResolver;
+use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageHandlerBuilderWithOutputChannel;
+use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 
 /**
- * Class AggregateInterceptor
+ * Interface CallInterceptor
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  */
-class CallInterceptor
+interface CallInterceptor
 {
     /**
-     * @var string
+     * @return string[]
      */
-    private $referenceName;
-    /**
-     * @var string
-     */
-    private $methodName;
-    /**
-     * @var MessageToParameterConverterBuilder[]
-     */
-    private $parameterConverters;
+    public function getRequiredReferences() : array;
 
     /**
-     * AggregateInterceptor constructor.
+     * @param ChannelResolver        $channelResolver
+     * @param ReferenceSearchService $referenceSearchService
      *
-     * @param string                               $referenceName
-     * @param string                               $methodName
-     * @param MessageToParameterConverterBuilder[] $parameterConverters
+     * @return MessageHandlerBuilderWithOutputChannel
      */
-    private function __construct(string $referenceName, string $methodName, array $parameterConverters)
-    {
-        Assert::allInstanceOfType($parameterConverters, MessageToParameterConverterBuilder::class);
-
-        $this->referenceName       = $referenceName;
-        $this->methodName          = $methodName;
-        $this->parameterConverters = $parameterConverters;
-    }
-
-    /**
-     * @param string $referenceName
-     * @param string $methodName
-     * @param MessageToParameterConverterBuilder[]  $parameterConverters
-     *
-     * @return CallInterceptor
-     */
-    public static function create(string $referenceName, string $methodName, array $parameterConverters) : self
-    {
-        return new self($referenceName, $methodName, $parameterConverters);
-    }
-
-    /**
-     * @return string
-     */
-    public function getReferenceName(): string
-    {
-        return $this->referenceName;
-    }
-
-    /**
-     * @return string
-     */
-    public function getMethodName(): string
-    {
-        return $this->methodName;
-    }
-
-    /**
-     * @return MessageToParameterConverterBuilder[]
-     */
-    public function getParameterConverters(): array
-    {
-        return $this->parameterConverters;
-    }
-
-    /**
-     * @return string
-     */
-    public function __toString()
-    {
-        return "Interceptor {$this->referenceName}:{$this->methodName}";
-    }
+    public function build(ChannelResolver $channelResolver,ReferenceSearchService $referenceSearchService) : MessageHandlerBuilderWithOutputChannel;
 }

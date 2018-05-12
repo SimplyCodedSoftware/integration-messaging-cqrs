@@ -212,7 +212,9 @@ class CqrsMessageHandlerBuilder implements MessageHandlerBuilderWithParameterCon
         $this->postSendInterceptors = $interceptors;
 
         foreach ($interceptors as $interceptor) {
-            $this->registerRequiredReference($interceptor->getReferenceName());
+            foreach ($interceptor->getRequiredReferences() as $requiredReference) {
+                $this->registerRequiredReference($requiredReference);
+            }
         }
 
         return $this;
@@ -297,7 +299,7 @@ class CqrsMessageHandlerBuilder implements MessageHandlerBuilderWithParameterCon
      * @param ChannelResolver            $channelResolver
      * @param ReferenceSearchService     $referenceSearchService
      * @param ChainMessageHandlerBuilder $chainAggregateMessageHandler
-     * @param CallInterceptor[]            $interceptors
+     * @param CallInterceptor[] $interceptors
      *
      * @throws InvalidArgumentException
      * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
@@ -305,33 +307,7 @@ class CqrsMessageHandlerBuilder implements MessageHandlerBuilderWithParameterCon
     private function registerInterceptors(ChannelResolver $channelResolver, ReferenceSearchService $referenceSearchService, ChainMessageHandlerBuilder $chainAggregateMessageHandler, array $interceptors): void
     {
         foreach ($interceptors as $interceptorToRegister) {
-            $interceptorInterface = InterfaceToCall::createFromObject(
-                $referenceSearchService->findByReference($interceptorToRegister->getReferenceName()),
-                $interceptorToRegister->getMethodName()
-            );
-
-            if (!$interceptorInterface->hasReturnTypeVoid() && $interceptorInterface->isReturnTypeUnknown()) {
-                throw InvalidArgumentException::create("{$interceptorToRegister} must have return value or be void");
-            }
-
-            if ($interceptorInterface->hasReturnTypeVoid()) {
-                $chainAggregateMessageHandler->chain(
-                    ServiceActivatorBuilder::createWithDirectReference(
-                        "",
-                            new AggregateInterceptorReturnSameMessageWrapper(
-                                ServiceActivatorBuilder::create("", $interceptorToRegister->getReferenceName(), $interceptorToRegister->getMethodName())
-                                    ->withMethodParameterConverters($interceptorToRegister->getParameterConverters())
-                                    ->build($channelResolver, $referenceSearchService)
-                            ),
-                        "handle"
-                        )
-                );
-            } else {
-                $chainAggregateMessageHandler->chain(
-                    TransformerBuilder::create("", $interceptorToRegister->getReferenceName(), $interceptorToRegister->getMethodName())
-                        ->withMethodParameterConverters($interceptorToRegister->getParameterConverters())
-                );
-            }
+            $chainAggregateMessageHandler->chain($interceptorToRegister->build($channelResolver, $referenceSearchService));
         }
     }
 

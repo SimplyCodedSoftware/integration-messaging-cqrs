@@ -12,7 +12,7 @@ use Doctrine\Common\Annotations\Annotation\Target;
  * @Annotation
  * @Target({"ANNOTATION"})
  */
-class CallInterceptorAnnotation
+class ReferenceCallInterceptorAnnotation
 {
     /**
      * @var string

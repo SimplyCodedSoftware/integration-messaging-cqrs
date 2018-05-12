@@ -3,6 +3,8 @@
 namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageEndpointAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToMessage\MessageToMessageHeaderExpressionSetterAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToMessage\MessageToMessagePayloadExpressionSetterAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\MessageToPayloadParameterAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\ModuleAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder;
@@ -18,13 +20,18 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryFactory;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CallInterceptorAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\EnrichCallInterceptorAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ReferenceCallInterceptorAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ClassFactoryMethodInterceptorAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\ClassMethodInterceptorAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\EnrichCallInterceptor;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\ReferenceCallInterceptor;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CqrsMessageHandlerBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Handler\Enricher\Setter\ExpressionHeaderSetterBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Handler\Enricher\Setter\ExpressionPayloadSetterBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\InterfaceToCall;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageHandlerBuilderWithParameterConverters;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
@@ -376,14 +383,33 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
      * @param                           $interceptorAnnotation
      *
      * @return CallInterceptor
+     * @throws InvalidArgumentException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     private function createCallInterceptor(AnnotationRegistration $registration, CqrsMessageHandlerBuilder $handler, $interceptorAnnotation): CallInterceptor
     {
-        \assert($interceptorAnnotation instanceof CallInterceptorAnnotation, "Interceptor must be of class " . CallInterceptorAnnotation::class);
-        $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $interceptorAnnotation->parameterConverters);
+        if ($interceptorAnnotation instanceof ReferenceCallInterceptorAnnotation) {
+            $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $interceptorAnnotation->parameterConverters);
 
-        $callInterceptor = CallInterceptor::create($interceptorAnnotation->referenceName, $interceptorAnnotation->methodName, $parameterConverters);
+            return ReferenceCallInterceptor::create($interceptorAnnotation->referenceName, $interceptorAnnotation->methodName, $parameterConverters);
+        }else if ($interceptorAnnotation instanceof EnrichCallInterceptorAnnotation) {
+            $messageSetters = [];
+            foreach ($interceptorAnnotation->messageToMessageSetters as $messageSetter) {
+                if ($messageSetter instanceof MessageToMessageHeaderExpressionSetterAnnotation) {
+                    $messageSetters[] = ExpressionHeaderSetterBuilder::createWith($messageSetter->propertyPathToSet, $messageSetter->expression);
+                }else if ($messageSetter instanceof MessageToMessagePayloadExpressionSetterAnnotation) {
+                    $messageSetters[] = ExpressionPayloadSetterBuilder::createWith($messageSetter->propertyPathToSet, $messageSetter->expression);
+                }else {
+                    throw InvalidArgumentException::create("Wrong MessageToMessage Setter given for {$registration}");
+                }
+            }
 
-        return $callInterceptor;
+            return EnrichCallInterceptor::create($messageSetters)
+                    ->withRequestChannelName($interceptorAnnotation->requestMessageChannel)
+                    ->withRequestHeaders($interceptorAnnotation->requestHeaders)
+                    ->withRequestPayloadExpression($interceptorAnnotation->requestPayloadExpression);
+        }else {
+            throw InvalidArgumentException::create("Wrong interceptor class given for {$registration} ");
+        }
     }
 }
