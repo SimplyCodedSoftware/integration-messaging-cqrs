@@ -15,18 +15,17 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationException;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationObserver;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CqrsMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryFactory;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CqrsMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\InterfaceToCall;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageHandlerBuilderWithParameterConverters;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Router\RouterBuilder;
-use SimplyCodedSoftware\IntegrationMessaging\Handler\ServiceActivator\ServiceActivatorBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
 
 /**
@@ -41,11 +40,11 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     const INTEGRATION_MESSAGING_CQRS_AGGREGATE_HEADER                   = "cqrs.aggregate";
     const INTEGRATION_MESSAGING_CQRS_AGGREGATE_CLASS_NAME_HEADER        = "cqrs.aggregate.class_name";
     const INTEGRATION_MESSAGING_CQRS_AGGREGATE_METHOD_HEADER            = "cqrs.aggregate.method";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_REPOSITORY_HEADER            = "cqrs.aggregate.repository";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_REPOSITORY_HEADER        = "cqrs.aggregate.repository";
     const INTEGRATION_MESSAGING_CQRS_AGGREGATE_IS_FACTORY_METHOD_HEADER = "cqrs.aggregate.is_factory_method";
     const INTEGRATION_MESSAGING_CQRS_AGGREGATE_ID_HEADER                = "cqrs.aggregate.id";
     const INTEGRATION_MESSAGING_CQRS_AGGREGATE_EXPECTED_VERSION_HEADER  = "cqrs.aggregate.expected_version";
-    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_MESSAGE_HEADER  = "cqrs.aggregate.calling_message";
+    const INTEGRATION_MESSAGING_CQRS_AGGREGATE_MESSAGE_HEADER           = "cqrs.aggregate.calling_message";
     const CQRS_MODULE                                                   = "cqrsModule";
 
     /**
@@ -123,14 +122,6 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     /**
      * @inheritDoc
      */
-    public function preConfigure(array $moduleExtensions, ConfigurationObserver $configurationObserver): void
-    {
-        return;
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function getConfigurationVariables(): array
     {
         return [];
@@ -150,61 +141,32 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     public function prepare(Configuration $configuration, array $moduleExtensions, ConfigurationObserver $configurationObserver): void
     {
         foreach ($this->serviceCommandHandlerRegistrations as $registration) {
-            $interfaceToCall = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
+            list($interfaceToCall, $inputMessageChannelName) = $this->getInputChannelFor($registration, true);
 
-            if ($interfaceToCall->hasReturnValue()) {
-                throw InvalidArgumentException::create("Command handler {$interfaceToCall} must not return value. Change return type to `void`");
-            }
-
-            $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
-            $handler                 = CqrsMessageHandlerBuilder::createServiceCommandHandlerWith($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
-
+            $handler = CqrsMessageHandlerBuilder::createServiceCommandHandlerWith($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
             $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
         }
 
         foreach ($this->serviceQueryHandlerRegistrations as $registration) {
-            $interfaceToCall = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
+            list($interfaceToCall, $inputMessageChannelName) = $this->getInputChannelFor($registration, false);
 
-            if (!$interfaceToCall->hasReturnValue()) {
-                throw InvalidArgumentException::create("Query handler {$interfaceToCall} must return value. Change return value from `void` to result type");
-            }
-
-            $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
             $handler = CqrsMessageHandlerBuilder::createServiceQueryHandlerWith($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
-            $handler->withOutputMessageChannel($registration->getAnnotationForMethod()->outputChannelName);
-
-
-            $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
+            $this->registerChannelAndQueryHandler($configuration, $handler, $registration, $interfaceToCall, $inputMessageChannelName);
 
         }
 
         foreach ($this->aggregateCommandHandlerRegistrations as $registration) {
-            $interfaceToCall         = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
-            $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
+            list($interfaceToCall, $inputMessageChannelName) = $this->getInputChannelFor($registration, true);
 
             $handler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith($inputMessageChannelName, $registration->getClassWithAnnotation(), $registration->getMethodName());
-
-            /** @var CommandHandlerAnnotation $annotationForMethod */
-            $annotationForMethod = $registration->getAnnotationForMethod();
-            $preCallInterceptors = [];
-            foreach ($annotationForMethod->preCallInterceptors as $preCallInterceptor) {
-                $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $preCallInterceptor->parameterConverters);
-
-                $preCallInterceptors[] = CallInterceptor::create($preCallInterceptor->referenceName, $preCallInterceptor->methodName, $parameterConverters);
-            }
-            $handler->withPreCallInterceptors($preCallInterceptors);
-
             $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
         }
 
         foreach ($this->aggregateQueryHandlerRegistrations as $registration) {
-            $interfaceToCall         = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
-            $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
+            list($interfaceToCall, $inputMessageChannelName) = $this->getInputChannelFor($registration, false);
 
             $handler = CqrsMessageHandlerBuilder::createAggregateQueryHandlerWith($inputMessageChannelName, $registration->getClassWithAnnotation(), $registration->getMethodName());
-            $handler->withOutputMessageChannel($registration->getAnnotationForMethod()->outputChannelName);
-
-            $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
+            $this->registerChannelAndQueryHandler($configuration, $handler, $registration, $interfaceToCall, $inputMessageChannelName);
         }
 
         $configuration
@@ -245,9 +207,12 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
      * @param               $registration
      * @param               $inputMessageChannelName
      */
-    private function registerChannelAndHandler(Configuration $configuration, InterfaceToCall $interfaceToCall, MessageHandlerBuilderWithParameterConverters $handler, AnnotationRegistration $registration, string $inputMessageChannelName): void
+    private function registerChannelAndHandler(Configuration $configuration, InterfaceToCall $interfaceToCall, CqrsMessageHandlerBuilder $handler, AnnotationRegistration $registration, string $inputMessageChannelName): void
     {
         $this->configureMessageParametersFor($interfaceToCall, $handler, $registration);
+        $this->registerPreCallInterceptors($registration, $handler);
+        $this->registerPostCallInterceptors($registration, $handler);
+
         $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel($inputMessageChannelName));
         $configuration->registerMessageHandler($handler);
     }
@@ -265,8 +230,8 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             return;
         }
 
-        $methodAnnotation                = $annotationRegistration->getAnnotationForMethod();
-        $parameterConverterAnnotations   = isset($methodAnnotation->parameterConverters) ? $methodAnnotation->parameterConverters : [];
+        $methodAnnotation              = $annotationRegistration->getAnnotationForMethod();
+        $parameterConverterAnnotations = isset($methodAnnotation->parameterConverters) ? $methodAnnotation->parameterConverters : [];
 
         if (!$annotationRegistration->getAnnotationForMethod()->messageClassName) {
             $messageParameter                = new MessageToPayloadParameterAnnotation();
@@ -280,6 +245,52 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             $annotationRegistration->getMethodName(),
             $parameterConverterAnnotations
         );
+    }
+
+    /**
+     * @param $registration
+     * @param $handler
+     */
+    private function registerPreCallInterceptors(AnnotationRegistration $registration, CqrsMessageHandlerBuilder $handler): void
+    {
+        $annotationForMethod = $registration->getAnnotationForMethod();
+        $preCallInterceptors = [];
+        foreach ($annotationForMethod->preCallInterceptors as $preCallInterceptor) {
+            $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $preCallInterceptor->parameterConverters);
+
+            $preCallInterceptors[] = CallInterceptor::create($preCallInterceptor->referenceName, $preCallInterceptor->methodName, $parameterConverters);
+        }
+        $handler->withPreCallInterceptors($preCallInterceptors);
+    }
+
+    /**
+     * @param $registration
+     * @param $handler
+     */
+    private function registerPostCallInterceptors(AnnotationRegistration $registration, CqrsMessageHandlerBuilder $handler): void
+    {
+        $annotationForMethod = $registration->getAnnotationForMethod();
+        $postCallInterceptors = [];
+        foreach ($annotationForMethod->postCallInterceptors as $preCallInterceptor) {
+            $parameterConverters = $this->parameterConverterAnnotationFactory->createParameterConverters($handler, $registration->getClassWithAnnotation(), $registration->getMethodName(), $preCallInterceptor->parameterConverters);
+
+            $postCallInterceptors[] = CallInterceptor::create($preCallInterceptor->referenceName, $preCallInterceptor->methodName, $parameterConverters);
+        }
+        $handler->withPostCallInterceptors($postCallInterceptors);
+    }
+
+    /**
+     * @param Configuration             $configuration
+     * @param CqrsMessageHandlerBuilder $handler
+     * @param AnnotationRegistration    $registration
+     * @param InterfaceToCall           $interfaceToCall
+     * @param string                    $inputMessageChannelName
+     */
+    private function registerChannelAndQueryHandler(Configuration $configuration, CqrsMessageHandlerBuilder $handler, AnnotationRegistration $registration, InterfaceToCall $interfaceToCall, string $inputMessageChannelName): void
+    {
+        $handler->withOutputMessageChannel($registration->getAnnotationForMethod()->outputChannelName);
+
+        $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
     }
 
     /**
@@ -310,5 +321,29 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         }
 
         throw new InvalidArgumentException("No suitable aggregate repository for {$aggregateClassName}. Have you registered your aggregate?");
+    }
+
+    /**
+     * @param AnnotationRegistration $registration
+     * @param bool                   $isCommandHandler
+     *
+     * @return array
+     * @throws InvalidArgumentException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
+     */
+    private function getInputChannelFor(AnnotationRegistration $registration, bool $isCommandHandler): array
+    {
+        $interfaceToCall         = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
+        $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
+
+        if ($isCommandHandler && !$interfaceToCall->isStaticallyCalled() && $interfaceToCall->hasReturnValue()) {
+            throw InvalidArgumentException::create("Command handler {$interfaceToCall} must not return value. Change return type to `void`");
+        }
+
+        if (!$isCommandHandler && !$interfaceToCall->hasReturnValue()) {
+            throw InvalidArgumentException::create("Query handler {$interfaceToCall} must return value. Change return value from `void` to result type");
+        }
+
+        return array($interfaceToCall, $inputMessageChannelName);
     }
 }

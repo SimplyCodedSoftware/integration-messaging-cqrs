@@ -13,11 +13,11 @@ use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\Messa
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  * @AggregateAnnotation()
  */
-class AggregateCommandHandlerWithInterceptorExample
+class AggregateCommandHandlerWithPostCallInterceptorExample
 {
     /**
      * @CommandHandlerAnnotation(
-     *     preCallInterceptors={
+     *     postCallInterceptors={
      *          @CallInterceptorAnnotation(referenceName="some", methodName="action", parameterConverters={
      *              @MessageToPayloadParameterAnnotation(parameterName="command")
      *          })

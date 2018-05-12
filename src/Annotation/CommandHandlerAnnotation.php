@@ -27,4 +27,8 @@ class CommandHandlerAnnotation
      * @var array
      */
     public $preCallInterceptors = [];
+    /**
+     * @var array
+     */
+    public $postCallInterceptors = [];
 }

@@ -33,4 +33,8 @@ class QueryHandlerAnnotation
      * @var array
      */
     public $preCallInterceptors = [];
+    /**
+     * @var array
+     */
+    public $postCallInterceptors = [];
 }
