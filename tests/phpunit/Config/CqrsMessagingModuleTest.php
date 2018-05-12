@@ -30,7 +30,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\MessagingSystemConfiguration
 use SimplyCodedSoftware\IntegrationMessaging\Config\NullObserver;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateCallMessageHandler;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandlerBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CqrsMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\CqrsMessagingModule;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\InMemoryReferenceSearchService;
@@ -57,7 +57,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_service_command_handler()
     {
-        $serviceActivator = ServiceActivatorBuilder::create(SomeCommand::class, "serviceCommandHandlerExample", "doAction");
+        $serviceActivator = CqrsMessageHandlerBuilder::createServiceCommandHandlerWith(SomeCommand::class, "serviceCommandHandlerExample", "doAction");
         $serviceActivator->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("command")]);
         $expectedConfiguration = $this->createMessagingSystemConfiguration()
             ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(SomeCommand::class))
@@ -70,7 +70,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_service_command_handler_with_message_parameters()
     {
-        $serviceActivator = ServiceActivatorBuilder::create(HelloWorldCommand::class, CommandHandlerServiceWithParametersExample::class, "sayHello");
+        $serviceActivator = CqrsMessageHandlerBuilder::createServiceCommandHandlerWith(HelloWorldCommand::class, CommandHandlerServiceWithParametersExample::class, "sayHello");
         $serviceActivator->registerRequiredReference("calculator");
         $serviceActivator->withMethodParameterConverters(
             [
@@ -91,7 +91,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_service_command_handler_with_message_name_defined_in_annotation()
     {
-        $serviceActivator = ServiceActivatorBuilder::create(SomeCommand::class, CommandHandlerServiceWithCommandDefinedInAnnotation::class, "execute");
+        $serviceActivator = CqrsMessageHandlerBuilder::createServiceCommandHandlerWith(SomeCommand::class, CommandHandlerServiceWithCommandDefinedInAnnotation::class, "execute");
         $expectedConfiguration = $this->createMessagingSystemConfiguration()
             ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(SomeCommand::class))
             ->registerMessageHandler($serviceActivator);
@@ -112,7 +112,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_throwing_exception_if_command_handler_has_return_value()
     {
-        $this->expectException(ConfigurationException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         $this->prepareConfiguration([
             CommandHandlerWithReturnValue::class
@@ -121,9 +121,8 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_service_query_handler()
     {
-        $serviceActivator = ServiceActivatorBuilder::create(SomeQuery::class, QueryHandlerServiceExample::class, "searchFor")
-                                ->withRequiredReply(true);
-        $serviceActivator->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("query")]);
+        $serviceActivator = CqrsMessageHandlerBuilder::createServiceQueryHandlerWith(SomeQuery::class, QueryHandlerServiceExample::class, "searchFor")
+                                ->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("query")]);
         $expectedConfiguration = $this->createMessagingSystemConfiguration()
             ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(SomeQuery::class))
             ->registerMessageHandler($serviceActivator);
@@ -135,9 +134,8 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_service_query_handler_with_class_metadata_defined()
     {
-        $serviceActivator = ServiceActivatorBuilder::create(SomeQuery::class, QueryHandlerServiceWithClassMetadataDefined::class, "searchFor")
-            ->withRequiredReply(true);
-        $serviceActivator->withMethodParameterConverters([MessageToHeaderParameterConverterBuilder::create("personId", "currentUserId")]);
+        $serviceActivator = CqrsMessageHandlerBuilder::createServiceQueryHandlerWith(SomeQuery::class, QueryHandlerServiceWithClassMetadataDefined::class, "searchFor")
+                                ->withMethodParameterConverters([MessageToHeaderParameterConverterBuilder::create("personId", "currentUserId")]);
         $expectedConfiguration = $this->createMessagingSystemConfiguration()
             ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(SomeQuery::class))
             ->registerMessageHandler($serviceActivator);
@@ -149,7 +147,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_throwing_exception_if_query_handler_has_no_return_value()
     {
-        $this->expectException(ConfigurationException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         $this->prepareConfiguration([
             QueryHandlerWithNoReturnValue::class
@@ -158,7 +156,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_aggregate_command_handler()
     {
-        $commandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(DoStuffCommand::class, AggregateCommandHandlerExample::class, "doAction");
+        $commandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(DoStuffCommand::class, AggregateCommandHandlerExample::class, "doAction");
         $commandHandler->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("command")]);
 
         $expectedConfiguration = $this->createMessagingSystemConfiguration()
@@ -172,7 +170,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_aggregate_query_handler()
     {
-        $commandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(SomeQuery::class, AggregateQueryHandlerExample::class, "doStuff");
+        $commandHandler = CqrsMessageHandlerBuilder::createAggregateQueryHandlerWith(SomeQuery::class, AggregateQueryHandlerExample::class, "doStuff");
         $commandHandler->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("query")]);
 
         $expectedConfiguration = $this->createMessagingSystemConfiguration()
@@ -186,8 +184,8 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_aggregate_query_handler_with_output_channel()
     {
-        $commandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(SomeQuery::class, AggregateQueryHandlerWithOutputChannelExample::class, "doStuff")
-                            ->withOutputChannelName("outputChannel");
+        $commandHandler = CqrsMessageHandlerBuilder::createAggregateQueryHandlerWith(SomeQuery::class, AggregateQueryHandlerWithOutputChannelExample::class, "doStuff")
+                            ->withOutputMessageChannel("outputChannel");
         $commandHandler->withMethodParameterConverters([MessageToPayloadParameterConverterBuilder::create("query")]);
 
         $expectedConfiguration = $this->createMessagingSystemConfiguration()
@@ -201,8 +199,8 @@ class CqrsMessagingModuleTest extends TestCase
 
     public function test_registering_aggregate_command_handler_with_channel_interceptors()
     {
-        $commandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(DoStuffCommand::class, AggregateCommandHandlerWithInterceptorExample::class, "interceptedCommand")
-            ->withOutputChannelName("nullChannel")
+        $commandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(DoStuffCommand::class, AggregateCommandHandlerWithInterceptorExample::class, "interceptedCommand")
+            ->withOutputMessageChannel("nullChannel")
             ->withPreCallInterceptors([
                 CallInterceptor::create("some", "action", [
                     MessageToPayloadParameterConverterBuilder::create("command")

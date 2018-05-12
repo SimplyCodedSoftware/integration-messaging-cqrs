@@ -2,9 +2,13 @@
 
 namespace Fixture\CommandHandler\Aggregate;
 
+use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariable;
+use SimplyCodedSoftware\IntegrationMessaging\Config\ModuleExtension;
+use SimplyCodedSoftware\IntegrationMessaging\Config\RequiredReference;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryFactory;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\AggregateRepositoryConstructor;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\CqrsMessagingModule;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 
 /**
@@ -12,7 +16,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
  * @package Fixture\CommandHandler\Aggregate
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  */
-class InMemoryOrderAggregateRepositoryConstructor implements AggregateRepositoryConstructor, AggregateRepositoryFactory
+class InMemoryOrderAggregateRepositoryConstructor implements AggregateRepositoryConstructor, AggregateRepositoryFactory, ModuleExtension
 {
     /**
      * @var AggregateRepository
@@ -27,6 +31,30 @@ class InMemoryOrderAggregateRepositoryConstructor implements AggregateRepository
     private function __construct(array $orders)
     {
         $this->orderAggregateRepository = InMemoryAggregateRepository::createWith($orders);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getName(): string
+    {
+        return CqrsMessagingModule::CQRS_MODULE;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getConfigurationVariables(): array
+    {
+        return [];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getRequiredReferences(): array
+    {
+        return [];
     }
 
     /**

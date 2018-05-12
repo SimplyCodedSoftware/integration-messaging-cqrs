@@ -25,7 +25,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Channel\QueueChannel;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\InMemoryAnnotationRegistrationService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryChannelResolver;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandlerBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CqrsMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateNotFoundException;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateVersionMismatchException;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\CqrsMessagingModule;
@@ -45,10 +45,10 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\MessageBuilder;
  */
 class AggregateMessageHandlerBuilderTest extends TestCase
 {
-    public function __test_calling_existing_aggregate_method_with_only_command_as_parameter()
+    public function test_calling_existing_aggregate_method_with_only_command_as_parameter()
     {
         $order                          = Order::createWith(CreateOrderCommand::create(1, 1, "Poland"));
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "",
             Order::class,
             "changeShippingAddress"
@@ -65,9 +65,9 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         $this->assertEquals($newShippingAddress, $order->getShippingAddress());
     }
 
-    public function __test_configuring_command_handler()
+    public function test_configuring_command_handler()
     {
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             ChangeShippingAddressCommand::class,
             Order::class,
             "changeShippingAddress"
@@ -80,22 +80,22 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         $this->assertEquals(["some-ref"], $aggregateCallingCommandHandler->getRequiredReferenceNames());
     }
 
-    public function __test_throwing_exception_if_aggregate_method_can_return_value_for_command_handler()
+    public function test_throwing_exception_if_aggregate_method_can_return_value_for_command_handler()
     {
         $this->expectException(InvalidArgumentException::class);
 
-        AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "",
             Order::class,
             "hasVersion"
         );
     }
 
-    public function __test_calling_aggregate_for_query_handler_with_return_value()
+    public function test_calling_aggregate_for_query_handler_with_return_value()
     {
         $orderAmount                    = 5;
         $order                          = Order::createWith(CreateOrderCommand::create(1, $orderAmount, "Poland"));
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateQueryHandlerWith(
             "",
             Order::class,
             "getAmountWithQuery"
@@ -119,16 +119,16 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         );
     }
 
-    public function __test_calling_aggregate_for_query_handler_with_output_channel()
+    public function test_calling_aggregate_for_query_handler_with_output_channel()
     {
         $outputChannelName              = "output";
         $orderAmount                    = 5;
         $order                          = Order::createWith(CreateOrderCommand::create(1, $orderAmount, "Poland"));
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateQueryHandlerWith(
             "inputChannel",
             Order::class,
             "getAmountWithQuery"
-        )->withOutputChannelName($outputChannelName);
+        )->withOutputMessageChannel($outputChannelName);
 
         $outputChannel         = QueueChannel::create();
         $aggregateQueryHandler = $aggregateCallingCommandHandler->build(
@@ -151,11 +151,11 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         );
     }
 
-    public function __test_calling_aggregate_for_query_without_parameters()
+    public function test_calling_aggregate_for_query_without_parameters()
     {
         $orderAmount                    = 5;
         $order                          = Order::createWith(CreateOrderCommand::create(1, $orderAmount, "Poland"));
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateQueryHandlerWith(
             "inputChannel",
             Order::class,
             "getAmount"
@@ -179,10 +179,10 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         );
     }
 
-    public function __test_creating_new_aggregate_from_factory_method()
+    public function test_creating_new_aggregate_from_factory_method()
     {
         $aggregateRepository            = InMemoryOrderAggregateRepositoryConstructor::createEmpty();
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "inputChannel",
             Order::class,
             "createWith"
@@ -202,10 +202,10 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         $this->assertNotNull($aggregateRepository->findBy(1));
     }
 
-    public function __test_calling_aggregate_with_version_locking()
+    public function test_calling_aggregate_with_version_locking()
     {
         $order                          = Order::createWith(CreateOrderCommand::create(1, 1, "Poland"));
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "inputChannel",
             Order::class,
             "multiplyOrder"
@@ -223,9 +223,9 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         $aggregateCommandHandler->handle(MessageBuilder::withPayload(MultiplyAmountCommand::create(1, 1, 10))->build());
     }
 
-    public function __test_throwing_exception_when_trying_to_handle_command_without_aggregate_id()
+    public function test_throwing_exception_when_trying_to_handle_command_without_aggregate_id()
     {
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "inputChannel",
             Order::class,
             "finish"
@@ -241,10 +241,10 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         $aggregateCommandHandler->handle(MessageBuilder::withPayload(CommandWithoutAggregateIdentifier::create(1))->build());
     }
 
-    public function __test_calling_aggregate_with_void_interceptor()
+    public function test_calling_aggregate_with_void_interceptor()
     {
         $order                          = Order::createWith(CreateOrderCommand::create(1, 1, "Poland"));
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "",
             ShopAggregateExample::class,
             "create"
@@ -266,9 +266,9 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         $aggregateCommandHandler->handle(MessageBuilder::withPayload(CreateShopCommand::create("some"))->build());
     }
 
-    public function __test_throwing_exception_when_register_interceptor_without_return_value()
+    public function test_throwing_exception_when_register_interceptor_without_return_value()
     {
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "",
             ShopAggregateExample::class,
             "create"
@@ -288,9 +288,9 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         );
     }
 
-    public function __test_calling_aggregate_with_header_changing_interceptor()
+    public function test_calling_aggregate_with_header_changing_interceptor()
     {
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "",
             ShopAggregateExample::class,
             "create"
@@ -316,9 +316,9 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         $this->assertTrue(true);
     }
 
-    public function __test_calling_aggregate_with_interceptor_containing_parameter_converter()
+    public function test_calling_aggregate_with_interceptor_containing_parameter_converter()
     {
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "",
             ShopAggregateExample::class,
             "close"
@@ -347,7 +347,7 @@ class AggregateMessageHandlerBuilderTest extends TestCase
 
     public function test_calling_multiple_interceptors_with_command_modification()
     {
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createCommandHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith(
             "",
             ShopAggregateExample::class,
             "addProducts"
@@ -380,7 +380,7 @@ class AggregateMessageHandlerBuilderTest extends TestCase
     {
         $newAmount             = 100;
         $order                          = Order::createWith(CreateOrderCommand::create(1, 5, "Poland"));
-        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(
+        $aggregateCallingCommandHandler = CqrsMessageHandlerBuilder::createAggregateQueryHandlerWith(
             "",
             Order::class,
             "getAmountWithQuery"

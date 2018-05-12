@@ -2,10 +2,15 @@
 
 namespace Fixture\CommandHandler\Aggregate;
 
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\CommandHandlerAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\QueryHandlerAnnotation;
+
 /**
  * Class Order
  * @package Fixture\CommandHandler\Aggregate
  * @author Dariusz Gafka <dgafka.mail@gmail.com>
+ * @AggregateAnnotation()
  */
 class Order implements VersionAggregate
 {
@@ -30,6 +35,11 @@ class Order implements VersionAggregate
      */
     private $customerId;
 
+    /**
+     * Order constructor.
+     *
+     * @param CreateOrderCommand $createOrderCommand
+     */
     private function __construct(CreateOrderCommand $createOrderCommand)
     {
         $this->orderId = $createOrderCommand->getOrderId();
@@ -39,6 +49,12 @@ class Order implements VersionAggregate
         $this->increaseAggregateVersion();
     }
 
+    /**
+     * @param CreateOrderCommand $command
+     *
+     * @return Order
+     * @CommandHandlerAnnotation()
+     */
     public static function createWith(CreateOrderCommand $command) : self
     {
         return new self($command);
@@ -50,6 +66,10 @@ class Order implements VersionAggregate
         $this->increaseAggregateVersion();
     }
 
+    /**
+     * @param ChangeShippingAddressCommand $command
+     * @CommandHandlerAnnotation()
+     */
     public function changeShippingAddress(ChangeShippingAddressCommand $command) : void
     {
         $this->shippingAddress = $command->getShippingAddress();
@@ -57,6 +77,10 @@ class Order implements VersionAggregate
     }
 
 
+    /**
+     * @param MultiplyAmountCommand $command
+     * @CommandHandlerAnnotation()
+     */
     public function multiplyOrder(MultiplyAmountCommand $command) : void
     {
         $this->amount *= $command->getAmount();
@@ -104,6 +128,12 @@ class Order implements VersionAggregate
         return $this->amount;
     }
 
+    /**
+     * @param GetOrderAmountQuery $query
+     *
+     * @return int
+     * @QueryHandlerAnnotation()
+     */
     public function getAmountWithQuery(GetOrderAmountQuery $query) : int
     {
         return $this->amount;
@@ -116,6 +146,7 @@ class Order implements VersionAggregate
 
     /**
      * @return string
+     * @QueryHandlerAnnotation(messageClassName=GetShippingAddressQuery::class)
      */
     public function getShippingAddress(): string
     {

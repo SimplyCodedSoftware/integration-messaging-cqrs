@@ -26,12 +26,12 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  */
-class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParameterConverters
+class CqrsMessageHandlerBuilder implements MessageHandlerBuilderWithParameterConverters, MessageHandlerBuilderWithOutputChannel
 {
     /**
      * @var string
      */
-    private $aggregateClassName;
+    private $referenceClassName;
     /**
      * @var string
      */
@@ -60,24 +60,30 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
      * @var CallInterceptor[]
      */
     private $postSendInterceptors = [];
+    /**
+     * @var bool
+     */
+    private $isAggregateBased;
 
     /**
      * AggregateCallingCommandHandlerBuilder constructor.
      *
-     * @param null|string                $inputChannelName
-     * @param string                     $aggregateClassName
-     * @param string                     $methodName
-     * @param bool                       $isCommandHandler
-     * @param string                     $outChannelName
+     * @param null|string $inputChannelName
+     * @param string      $aggregateClassName
+     * @param string      $methodName
+     * @param bool        $isCommandHandler
+     * @param string      $outChannelName
+     * @param bool        $isAggregateBased
      */
-    private function __construct(string $inputChannelName, string $aggregateClassName, string $methodName, bool $isCommandHandler, string $outChannelName)
+    private function __construct(string $inputChannelName, string $aggregateClassName, string $methodName, bool $isCommandHandler, string $outChannelName, bool $isAggregateBased)
     {
-        $this->aggregateClassName = $aggregateClassName;
+        $this->referenceClassName = $aggregateClassName;
         $this->methodName         = $methodName;
         $this->outputChannelName  = $isCommandHandler ? NullableMessageChannel::CHANNEL_NAME : $outChannelName;
-        $this->inputChannelName = $inputChannelName;
+        $this->inputChannelName   = $inputChannelName;
+        $this->isAggregateBased   = $isAggregateBased;
 
-        $this->initialize($this->aggregateClassName, $methodName, $isCommandHandler);
+        $this->initialize($this->referenceClassName, $methodName, $isCommandHandler, $isAggregateBased);
     }
 
     /**
@@ -85,11 +91,23 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
      * @param string $aggregateClassName
      * @param string $methodName
      *
-     * @return AggregateMessageHandlerBuilder
+     * @return CqrsMessageHandlerBuilder
      */
-    public static function createCommandHandlerWith(string $inputChannelName, string $aggregateClassName, string $methodName): self
+    public static function createAggregateCommandHandlerWith(string $inputChannelName, string $aggregateClassName, string $methodName): self
     {
-        return new self($inputChannelName, $aggregateClassName, $methodName, true, "");
+        return new self($inputChannelName, $aggregateClassName, $methodName, true, "", true);
+    }
+
+    /**
+     * @param string $inputChannelName
+     * @param string $aggregateClassName
+     * @param string $methodName
+     *
+     * @return CqrsMessageHandlerBuilder
+     */
+    public static function createServiceCommandHandlerWith(string $inputChannelName, string $aggregateClassName, string $methodName): self
+    {
+        return new self($inputChannelName, $aggregateClassName, $methodName, true, "", false);
     }
 
     /**
@@ -97,11 +115,23 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
      * @param string                         $aggregateClassName
      * @param string                         $methodName
      *
-     * @return AggregateMessageHandlerBuilder
+     * @return CqrsMessageHandlerBuilder
      */
-    public static function createQueryHandlerWith(string $inputChannelName, string $aggregateClassName, string $methodName): self
+    public static function createAggregateQueryHandlerWith(string $inputChannelName, string $aggregateClassName, string $methodName): self
     {
-        return new self($inputChannelName, $aggregateClassName, $methodName, false, "");
+        return new self($inputChannelName, $aggregateClassName, $methodName, false, "", true);
+    }
+
+    /**
+     * @param string $inputChannelName
+     * @param string $aggregateClassName
+     * @param string $methodName
+     *
+     * @return CqrsMessageHandlerBuilder
+     */
+    public static function createServiceQueryHandlerWith(string $inputChannelName, string $aggregateClassName, string $methodName): self
+    {
+        return new self($inputChannelName, $aggregateClassName, $methodName, false, "", false);
     }
 
     /**
@@ -115,9 +145,9 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
     /**
      * @param string $outputChannelName
      *
-     * @return AggregateMessageHandlerBuilder
+     * @return CqrsMessageHandlerBuilder
      */
-    public function withOutputChannelName(string $outputChannelName) : self
+    public function withOutputMessageChannel(string $outputChannelName) : self
     {
         $this->outputChannelName = $outputChannelName;
 
@@ -155,7 +185,7 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
     /**
      * @param CallInterceptor[] $interceptors
      *
-     * @return AggregateMessageHandlerBuilder
+     * @return CqrsMessageHandlerBuilder
      */
     public function withPreCallInterceptors(array $interceptors) : self
     {
@@ -173,7 +203,7 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
     /**
      * @param CallInterceptor[] $interceptors
      *
-     * @return AggregateMessageHandlerBuilder
+     * @return CqrsMessageHandlerBuilder
      */
     public function withPostCallInterceptors(array $interceptors) : self
     {
@@ -203,73 +233,64 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
      */
     public function build(ChannelResolver $channelResolver, ReferenceSearchService $referenceSearchService): MessageHandler
     {
-        $chainAggregateMessageHandler = ChainMessageHandlerBuilder::createWith("");
+        $chainCqrsMessageHandler = ChainMessageHandlerBuilder::createWith("");
 
         /** @var AggregateRepositoryFactory $aggregateRepositoryFactory */
         $aggregateRepositoryFactory = $referenceSearchService->findByReference(CqrsMessagingModule::CQRS_MODULE);
-        $interfaceToCall     = InterfaceToCall::create($this->aggregateClassName, $this->methodName);
+        $interfaceToCall     = InterfaceToCall::create($this->referenceClassName, $this->methodName);
 
-        $chainAggregateMessageHandler
-            ->chain(
-                ServiceActivatorBuilder::createWithDirectReference(
-                    "",
-                    new LoadAggregateService(
-                        $aggregateRepositoryFactory->getRepositoryFor($referenceSearchService, $this->aggregateClassName),
-                        $this->aggregateClassName,
-                        $this->methodName,
-                        $interfaceToCall->isStaticallyCalled()
-                    ),
-                    "load"
-                )
-            );
+        if ($this->isAggregateBased) {
+            $chainCqrsMessageHandler
+                ->chain(
+                    ServiceActivatorBuilder::createWithDirectReference(
+                        "",
+                        new LoadAggregateService(
+                            $aggregateRepositoryFactory->getRepositoryFor($referenceSearchService, $this->referenceClassName),
+                            $this->referenceClassName,
+                            $this->methodName,
+                            $interfaceToCall->isStaticallyCalled()
+                        ),
+                        "load"
+                    )
+                );
+        }
 
-        $this->registerInterceptors($channelResolver, $referenceSearchService, $chainAggregateMessageHandler, $this->preSendInterceptors);
+        $this->registerInterceptors($channelResolver, $referenceSearchService, $chainCqrsMessageHandler, $this->preSendInterceptors);
 
         $methodParameterConverters = [];
         foreach ($this->methodParameterConverterBuilders as $parameterConverterBuilder) {
             $methodParameterConverters[] = $parameterConverterBuilder->build($referenceSearchService);
         }
 
-        $chainAggregateMessageHandler
-            ->chain(
-                ServiceActivatorBuilder::createWithDirectReference(
-                    "",
-                    new CallAggregateService($channelResolver, $methodParameterConverters),
-                    "call"
-                )
-            );
+        if ($this->isAggregateBased) {
+            $chainCqrsMessageHandler
+                ->chain(
+                    ServiceActivatorBuilder::createWithDirectReference(
+                        "",
+                        new CallAggregateService($channelResolver, $methodParameterConverters),
+                        "call"
+                    )
+                );
+        }else {
+            $chainCqrsMessageHandler->chain(ServiceActivatorBuilder::create("", $this->referenceClassName, $this->methodName));
+        }
 
-        $this->registerInterceptors($channelResolver, $referenceSearchService, $chainAggregateMessageHandler, $this->postSendInterceptors);
+        $this->registerInterceptors($channelResolver, $referenceSearchService, $chainCqrsMessageHandler, $this->postSendInterceptors);
 
-        $chainAggregateMessageHandler
-            ->chain(
-                ServiceActivatorBuilder::createWithDirectReference(
-                    "",
-                    new SaveAggregateService(),
-                    "save"
-                )
-            );
+        if ($this->isAggregateBased) {
+            $chainCqrsMessageHandler
+                ->chain(
+                    ServiceActivatorBuilder::createWithDirectReference(
+                        "",
+                        new SaveAggregateService(),
+                        "save"
+                    )
+                );
+        }
 
-        return $chainAggregateMessageHandler
+        return $chainCqrsMessageHandler
                     ->withOutputMessageChannel($this->outputChannelName)
                     ->build($channelResolver, $referenceSearchService);
-    }
-
-    /**
-     * @param string $aggregateClassName
-     * @param string $methodName
-     * @param bool   $isCommandHandler
-     *
-     * @throws InvalidArgumentException
-     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
-     */
-    private function initialize(string $aggregateClassName, string $methodName, bool $isCommandHandler): void
-    {
-        $interfaceToCall = InterfaceToCall::create($aggregateClassName, $methodName);
-
-        if ($interfaceToCall->hasReturnValue() && !$interfaceToCall->isStaticallyCalled() && $isCommandHandler) {
-            throw InvalidArgumentException::create("{$aggregateClassName} with method {$methodName} must not return value for command handling");
-        }
     }
 
     /**
@@ -311,6 +332,32 @@ class AggregateMessageHandlerBuilder implements MessageHandlerBuilderWithParamet
                         ->withMethodParameterConverters($interceptorToRegister->getParameterConverters())
                 );
             }
+        }
+    }
+
+    /**
+     * @param string $aggregateClassName
+     * @param string $methodName
+     * @param bool   $isCommandHandler
+     * @param bool   $isAggregateBased
+     *
+     * @throws InvalidArgumentException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
+     */
+    private function initialize(string $aggregateClassName, string $methodName, bool $isCommandHandler, bool $isAggregateBased): void
+    {
+        if (!$isAggregateBased) {
+            return;
+        }
+
+        $interfaceToCall = InterfaceToCall::create($aggregateClassName, $methodName);
+
+        if ($interfaceToCall->hasReturnValue() && !$interfaceToCall->isStaticallyCalled() && $isCommandHandler) {
+            throw InvalidArgumentException::create("{$aggregateClassName} with method {$methodName} must not return value for command handling");
+        }
+
+        if (!$interfaceToCall->hasReturnValue() && !$isCommandHandler) {
+            throw InvalidArgumentException::create("{$aggregateClassName} with method {$methodName} must return value for query handling");
         }
     }
 }

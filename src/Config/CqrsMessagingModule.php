@@ -16,7 +16,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationObserver;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CallInterceptor;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateMessageHandlerBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Cqrs\CqrsMessageHandlerBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepositoryFactory;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\AggregateAnnotation;
@@ -153,11 +153,11 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             $interfaceToCall = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
 
             if ($interfaceToCall->hasReturnValue()) {
-                throw ConfigurationException::create("Command handler {$interfaceToCall} must not return value. Change return type to `void`");
+                throw InvalidArgumentException::create("Command handler {$interfaceToCall} must not return value. Change return type to `void`");
             }
 
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
-            $handler                 = ServiceActivatorBuilder::create($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
+            $handler                 = CqrsMessageHandlerBuilder::createServiceCommandHandlerWith($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
 
             $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
         }
@@ -166,13 +166,12 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             $interfaceToCall = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
 
             if (!$interfaceToCall->hasReturnValue()) {
-                throw ConfigurationException::create("Query handler {$interfaceToCall} must return value. Change return value from `void` to result type");
+                throw InvalidArgumentException::create("Query handler {$interfaceToCall} must return value. Change return value from `void` to result type");
             }
 
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
-            $handler                 = ServiceActivatorBuilder::create($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
+            $handler = CqrsMessageHandlerBuilder::createServiceQueryHandlerWith($inputMessageChannelName, $registration->getReferenceName(), $registration->getMethodName());
             $handler->withOutputMessageChannel($registration->getAnnotationForMethod()->outputChannelName);
-            $handler->withRequiredReply(true);
 
 
             $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
@@ -183,7 +182,7 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             $interfaceToCall         = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
 
-            $handler = AggregateMessageHandlerBuilder::createCommandHandlerWith($inputMessageChannelName, $registration->getClassWithAnnotation(), $registration->getMethodName());
+            $handler = CqrsMessageHandlerBuilder::createAggregateCommandHandlerWith($inputMessageChannelName, $registration->getClassWithAnnotation(), $registration->getMethodName());
 
             /** @var CommandHandlerAnnotation $annotationForMethod */
             $annotationForMethod = $registration->getAnnotationForMethod();
@@ -202,8 +201,8 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
             $interfaceToCall         = InterfaceToCall::create($registration->getClassWithAnnotation(), $registration->getMethodName());
             $inputMessageChannelName = $this->getInputMessageChannel($interfaceToCall, $registration);
 
-            $handler = AggregateMessageHandlerBuilder::createQueryHandlerWith($inputMessageChannelName, $registration->getClassWithAnnotation(), $registration->getMethodName());
-            $handler->withOutputChannelName($registration->getAnnotationForMethod()->outputChannelName);
+            $handler = CqrsMessageHandlerBuilder::createAggregateQueryHandlerWith($inputMessageChannelName, $registration->getClassWithAnnotation(), $registration->getMethodName());
+            $handler->withOutputMessageChannel($registration->getAnnotationForMethod()->outputChannelName);
 
             $this->registerChannelAndHandler($configuration, $interfaceToCall, $handler, $registration, $inputMessageChannelName);
         }
