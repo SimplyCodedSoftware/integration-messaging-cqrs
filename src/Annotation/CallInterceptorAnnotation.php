@@ -28,4 +28,10 @@ class CallInterceptorAnnotation
      * @var array
      */
     public $parameterConverters = [];
+    /**
+     * List of names for excluded methods. Used only in context of ClassMethodInterceptor
+     *
+     * @var array
+     */
+    public $excludedMethods = [];
 }

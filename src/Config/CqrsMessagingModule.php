@@ -279,15 +279,19 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         if (array_key_exists($registration->getClassWithAnnotation(), $this->classLevelInterceptorAnnotations)) {
             $classMethodInterceptorAnnotation = $this->classLevelInterceptorAnnotations[$registration->getClassWithAnnotation()];
 
-            if (!in_array($methodName, $classMethodInterceptorAnnotation->excludedMethods)) {
-                if ($isPreCallInterceptor) {
-                    foreach ($classMethodInterceptorAnnotation->preCallInterceptors as $callInterceptor) {
-                        $callInterceptors[] = $this->createCallInterceptor($registration, $handler, $callInterceptor);
+            if ($isPreCallInterceptor) {
+                foreach ($classMethodInterceptorAnnotation->preCallInterceptors as $callInterceptor) {
+                    if (in_array($methodName, $callInterceptor->excludedMethods)) {
+                        continue;
                     }
-                }else {
-                    foreach ($classMethodInterceptorAnnotation->postCallInterceptors as $callInterceptor) {
-                        $callInterceptors[] = $this->createCallInterceptor($registration, $handler, $callInterceptor);
+                    $callInterceptors[] = $this->createCallInterceptor($registration, $handler, $callInterceptor);
+                }
+            }else {
+                foreach ($classMethodInterceptorAnnotation->postCallInterceptors as $callInterceptor) {
+                    if (in_array($methodName, $callInterceptor->excludedMethods)) {
+                        continue;
                     }
+                    $callInterceptors[] = $this->createCallInterceptor($registration, $handler, $callInterceptor);
                 }
             }
         }

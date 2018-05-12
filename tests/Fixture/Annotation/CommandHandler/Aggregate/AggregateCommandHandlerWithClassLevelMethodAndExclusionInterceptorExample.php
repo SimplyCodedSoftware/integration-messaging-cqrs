@@ -16,16 +16,18 @@ use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessageToParameter\Messa
  * @AggregateAnnotation()
  * @ClassMethodInterceptorAnnotation(
  *     preCallInterceptors={
- *          @CallInterceptorAnnotation(referenceName="some", methodName="action", parameterConverters={
- *              @MessageToPayloadParameterAnnotation(parameterName="command")
- *          })
+ *          @CallInterceptorAnnotation(
+ *                  referenceName="some",
+ *                  methodName="action",
+ *                  parameterConverters={@MessageToPayloadParameterAnnotation(parameterName="command")},
+ *                  excludedMethods={"interceptedCommand"}
+ *          )
  *     },
  *     postCallInterceptors={
  *          @CallInterceptorAnnotation(referenceName="some", methodName="action", parameterConverters={
  *              @MessageToPayloadParameterAnnotation(parameterName="command")
- *          })
- *    },
- *    excludedMethods={"interceptedCommand"}
+ *          }, excludedMethods={"interceptedCommand"})
+ *    }
  * )
  */
 class AggregateCommandHandlerWithClassLevelMethodAndExclusionInterceptorExample

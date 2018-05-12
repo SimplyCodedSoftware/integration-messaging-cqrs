@@ -12,10 +12,5 @@ use Doctrine\Common\Annotations\Annotation\Target;
  */
 class ClassMethodInterceptorAnnotation extends WithInterceptors
 {
-    /**
-     * List of names for excluded methods
-     *
-     * @var array
-     */
-    public $excludedMethods = [];
+
 }
