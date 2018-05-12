@@ -2,6 +2,7 @@
 
 namespace Test\SimplyCodedSoftware\IntegrationMessaging\Cqrs;
 
+use Fixture\CommandHandler\Aggregate\ChangeAmountInterceptor;
 use Fixture\CommandHandler\Aggregate\ChangeShippingAddressCommand;
 use Fixture\CommandHandler\Aggregate\CommandWithoutAggregateIdentifier;
 use Fixture\CommandHandler\Aggregate\CreateOrderCommand;
@@ -375,6 +376,35 @@ class AggregateMessageHandlerBuilderTest extends TestCase
         $this->assertEquals(8, $shop->getProductsAmount());
     }
 
+    public function test_calling_post_interceptor_with_aggregate_query_handler()
+    {
+        $newAmount             = 100;
+        $order                          = Order::createWith(CreateOrderCommand::create(1, 5, "Poland"));
+        $aggregateCallingCommandHandler = AggregateMessageHandlerBuilder::createQueryHandlerWith(
+            "",
+            Order::class,
+            "getAmountWithQuery"
+        )->withPostCallInterceptors([
+            CallInterceptor::create(ChangeAmountInterceptor::class, "change", [])
+        ]);
+
+        $aggregateQueryHandler = $aggregateCallingCommandHandler->build(
+            InMemoryChannelResolver::createEmpty(),
+            $this->createReferenceSearchServiceWithRepositoryContainingOrdersAndServices([$order], [ChangeAmountInterceptor::class => ChangeAmountInterceptor::create($newAmount)])
+        );
+
+        $replyChannel = QueueChannel::create();
+        $aggregateQueryHandler->handle(
+            MessageBuilder::withPayload(GetOrderAmountQuery::createWith(1))
+                ->setReplyChannel($replyChannel)
+                ->build()
+        );
+
+        $this->assertEquals(
+            $newAmount,
+            $replyChannel->receive()->getPayload()
+        );
+    }
 
     /**
      * @param array $orders
