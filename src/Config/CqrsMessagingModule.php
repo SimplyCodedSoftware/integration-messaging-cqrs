@@ -255,7 +255,7 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
         }
 
         $methodAnnotation              = $annotationRegistration->getAnnotationForMethod();
-        $parameterConverterAnnotations = isset($methodAnnotation->parameterConverters) ? $methodAnnotation->parameterConverters : [];
+        $parameterConverterAnnotations = $methodAnnotation->parameterConverters;
 
         if (!$annotationRegistration->getAnnotationForMethod()->messageClassName) {
             $messageParameter                = new MessageToPayloadParameterAnnotation();

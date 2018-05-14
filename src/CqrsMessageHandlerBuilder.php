@@ -323,6 +323,8 @@ class CqrsMessageHandlerBuilder implements MessageHandlerBuilderWithParameterCon
     private function initialize(string $aggregateClassName, string $methodName, bool $isCommandHandler, bool $isAggregateBased): void
     {
         if (!$isAggregateBased) {
+            $this->registerRequiredReference($aggregateClassName);
+
             return;
         }
 

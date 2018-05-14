@@ -22,6 +22,7 @@ use Fixture\Annotation\QueryHandler\AggregateQueryHandlerWithOutputChannelExampl
 use Fixture\Annotation\QueryHandler\QueryHandlerServiceExample;
 use Fixture\Annotation\QueryHandler\QueryHandlerServiceWithClassMetadataDefined;
 use Fixture\Annotation\QueryHandler\QueryHandlerWithNoReturnValue;
+use Fixture\Annotation\QueryHandler\ServiceQueryHandlerWithAdditionalParameter;
 use Fixture\Annotation\QueryHandler\SomeQuery;
 use PHPUnit\Framework\TestCase;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder;
@@ -189,6 +190,27 @@ class CqrsMessagingModuleTest extends TestCase
             ], $expectedConfiguration
         );
     }
+
+    public function test_registering_service_query_handler_with_additional_parameter()
+    {
+        $serviceActivator      = CqrsMessageHandlerBuilder::createServiceQueryHandlerWith(SomeQuery::class, ServiceQueryHandlerWithAdditionalParameter::class, "searchFor")
+            ->withMethodParameterConverters(
+                [
+                    MessageToPayloadParameterConverterBuilder::create("query"),
+                    MessageToHeaderParameterConverterBuilder::create("currentUserId", "currentUserId")
+                ]
+            );
+        $expectedConfiguration = $this->createMessagingSystemConfiguration()
+            ->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(SomeQuery::class))
+            ->registerMessageHandler($serviceActivator);
+
+        $this->createModuleAndAssertConfiguration(
+            [
+                ServiceQueryHandlerWithAdditionalParameter::class
+            ], $expectedConfiguration
+        );
+    }
+
 
     public function test_registering_service_query_handler_with_class_metadata_defined()
     {
