@@ -2,6 +2,8 @@
 
 namespace Test\SimplyCodedSoftware\IntegrationMessaging\Cqrs;
 
+use Fixture\Annotation\QueryHandler\ServiceQueryHandlerWithAdditionalParameter;
+use Fixture\Annotation\QueryHandler\SomeQuery;
 use Fixture\CommandHandler\Aggregate\ChangeAmountInterceptor;
 use Fixture\CommandHandler\Aggregate\ChangeShippingAddressCommand;
 use Fixture\CommandHandler\Aggregate\CommandWithoutAggregateIdentifier;
@@ -21,6 +23,7 @@ use Fixture\CommandHandler\Interceptor\NotAuthorizedToDoActionInterceptor;
 use Fixture\CommandHandler\Interceptor\ShopAggregateExample;
 use Fixture\CommandHandler\Interceptor\WrongNoReturnValueInterceptor;
 use PHPUnit\Framework\TestCase;
+use Ramsey\Uuid\Uuid;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\QueueChannel;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\InMemoryAnnotationRegistrationService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\InMemoryChannelResolver;
@@ -34,6 +37,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\InMemoryReferenceSearchServ
 use SimplyCodedSoftware\IntegrationMessaging\Handler\MessageHandlingException;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Processor\MethodInvoker\MessageToHeaderParameterConverterBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Processor\MethodInvoker\MessageToPayloadParameterConverterBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\MessagingException;
 use SimplyCodedSoftware\IntegrationMessaging\NullableMessageChannel;
 use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
 use SimplyCodedSoftware\IntegrationMessaging\Support\MessageBuilder;
@@ -43,7 +47,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\MessageBuilder;
  * @package Test\SimplyCodedSoftware\IntegrationMessaging\Cqrs
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  */
-class AggregateMessageHandlerBuilderTest extends TestCase
+class CqrsMessageHandlerBuilderTest extends TestCase
 {
     public function test_calling_existing_aggregate_method_with_only_command_as_parameter()
     {
@@ -78,6 +82,30 @@ class AggregateMessageHandlerBuilderTest extends TestCase
 
         $aggregateCallingCommandHandler->registerRequiredReference("some-ref");
         $this->assertEquals(["some-ref"], $aggregateCallingCommandHandler->getRequiredReferenceNames());
+    }
+
+    public function test_registering_service_query_handler_with_additional_parameter()
+    {
+        $serviceActivator      = CqrsMessageHandlerBuilder::createServiceQueryHandlerWith(SomeQuery::class, ServiceQueryHandlerWithAdditionalParameter::class, "searchFor")
+            ->withMethodParameterConverters(
+                [
+                    MessageToPayloadParameterConverterBuilder::create("query"),
+                    MessageToHeaderParameterConverterBuilder::create("currentUserId", "currentUserId")
+                ]
+            )
+            ->build(InMemoryChannelResolver::createEmpty(), $this->createReferenceSearchServiceWithRepositoryContainingOrdersAndServices([], [
+                ServiceQueryHandlerWithAdditionalParameter::class => new ServiceQueryHandlerWithAdditionalParameter()
+            ]));
+
+        $replyChannel = QueueChannel::create();
+        $serviceActivator->handle(
+            MessageBuilder::withPayload(new SomeQuery())
+                ->setHeader("currentUserId", Uuid::uuid4())
+                ->setReplyChannel($replyChannel)
+                ->build()
+        );
+
+        $this->assertNotNull($replyChannel->receive());
     }
 
     public function test_throwing_exception_if_aggregate_method_can_return_value_for_command_handler()
@@ -236,9 +264,13 @@ class AggregateMessageHandlerBuilderTest extends TestCase
             $this->createReferenceSearchServiceWithRepositoryContaining([Order::createWith(CreateOrderCommand::create(1, 1, "Poland"))])
         );
 
-        $this->expectException(MessageHandlingException::class);
+        $this->expectException(AggregateNotFoundException::class);
 
-        $aggregateCommandHandler->handle(MessageBuilder::withPayload(CommandWithoutAggregateIdentifier::create(1))->build());
+        try {
+            $aggregateCommandHandler->handle(MessageBuilder::withPayload(CommandWithoutAggregateIdentifier::create(1))->build());
+        }catch (MessagingException $messagingException) {
+            throw $messagingException->getCause();
+        }
     }
 
     public function test_calling_aggregate_with_void_interceptor()

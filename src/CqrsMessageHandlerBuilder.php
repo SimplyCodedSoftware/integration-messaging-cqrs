@@ -274,7 +274,10 @@ class CqrsMessageHandlerBuilder implements MessageHandlerBuilderWithParameterCon
                     )
                 );
         }else {
-            $chainCqrsMessageHandler->chain(ServiceActivatorBuilder::create("", $this->referenceClassName, $this->methodName));
+            $chainCqrsMessageHandler->chain(
+                ServiceActivatorBuilder::create("", $this->referenceClassName, $this->methodName)
+                    ->withMethodParameterConverters($this->methodParameterConverterBuilders)
+            );
         }
 
         $this->registerInterceptors($channelResolver, $referenceSearchService, $chainCqrsMessageHandler, $this->postSendInterceptors);
