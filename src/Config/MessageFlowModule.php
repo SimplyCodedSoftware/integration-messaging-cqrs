@@ -3,6 +3,7 @@
 namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\ModuleAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Annotation\ModuleExtensionAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationModule;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationRegistrationService;
@@ -24,6 +25,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Support\Assert;
  * @package SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  * @ModuleAnnotation()
+ * @ModuleExtensionAnnotation()
  */
 class MessageFlowModule implements AnnotationModule, ApplicationContextModuleExtension
 {
