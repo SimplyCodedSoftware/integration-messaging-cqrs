@@ -32,6 +32,8 @@ class MessageFlowRegistrationSplitter
      * @param Message $message
      *
      * @return Message[]
+     * @throws NoMessageNameDefinedForMessageFlowException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     public function split(Message $message) : array
     {

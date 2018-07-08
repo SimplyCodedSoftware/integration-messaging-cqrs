@@ -25,4 +25,16 @@ class MessageFlowAnnotation
      * @var string
      */
     public $channelName = "";
+    /**
+     * Auto create when custom channel name passed
+     *
+     * @var bool
+     */
+    public $autoCreate = false;
+    /**
+     * Should autocreated channel be publish subscribe
+     *
+     * @var bool
+     */
+    public $isSubscriable = false;
 }

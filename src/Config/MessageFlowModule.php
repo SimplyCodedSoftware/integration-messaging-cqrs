@@ -2,24 +2,22 @@
 
 namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config;
 
-use SimplyCodedSoftware\IntegrationMessaging\Annotation\ApplicationContextAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\ModuleAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Channel\SimpleMessageChannelBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationModule;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\AnnotationRegistrationService;
+use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\ModuleConfiguration\ApplicationContextModule;
+use SimplyCodedSoftware\IntegrationMessaging\Config\Annotation\ModuleConfiguration\ApplicationContextModuleExtension;
 use SimplyCodedSoftware\IntegrationMessaging\Config\Configuration;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationObserver;
-use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariable;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfigurationVariableRetrievingService;
 use SimplyCodedSoftware\IntegrationMessaging\Config\ConfiguredMessagingSystem;
-use SimplyCodedSoftware\IntegrationMessaging\Config\ModuleExtension;
-use SimplyCodedSoftware\IntegrationMessaging\Config\RequiredReference;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\MessageFlowAnnotation;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\MessageFlowComponentAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Processor\MethodInvoker\MessageToHeaderParameterConverterBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\ReferenceSearchService;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Router\RouterBuilder;
 use SimplyCodedSoftware\IntegrationMessaging\Handler\Splitter\SplitterBuilder;
+use SimplyCodedSoftware\IntegrationMessaging\Support\Assert;
 
 /**
  * Class MessageFlowModule
@@ -27,7 +25,7 @@ use SimplyCodedSoftware\IntegrationMessaging\Handler\Splitter\SplitterBuilder;
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
  * @ModuleAnnotation()
  */
-class MessageFlowModule implements AnnotationModule
+class MessageFlowModule implements AnnotationModule, ApplicationContextModuleExtension
 {
     const INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL = "integration_messaging.cqrs.start_flow";
 
@@ -61,28 +59,21 @@ class MessageFlowModule implements AnnotationModule
      */
     public static function create(AnnotationRegistrationService $annotationRegistrationService): AnnotationModule
     {
-        $messageFlowAnnotations = [];
+        $messageFlowAnnotations = MessageFlowMapper::createWith([]);
 
         foreach ($annotationRegistrationService->getAllClassesWithAnnotation(MessageFlowAnnotation::class) as $messageFlowClass) {
             /** @var MessageFlowAnnotation $annotation */
             $annotation = $annotationRegistrationService->getAnnotationForClass($messageFlowClass, MessageFlowAnnotation::class);
-            $messageFlowAnnotations[$annotation->externalName][] = MessageFlowRegistration::createLocalFlow(
+            $messageFlowAnnotations->addRegistration(MessageFlowRegistration::createLocalFlow(
                 $annotation->externalName,
                 $messageFlowClass,
-                $annotation->channelName
-            );
+                $annotation->channelName,
+                $annotation->autoCreate,
+                $annotation->isSubscriable
+            ));
         }
 
-        foreach ($annotationRegistrationService->findRegistrationsFor(ApplicationContextAnnotation::class, MessageFlowComponentAnnotation::class) as $registration) {
-            $applicationContextClassName = $registration->getClassWithAnnotation();
-            $applicationContext = new $applicationContextClassName();
-
-            /** @var MessageFlowRegistration $messageFlowRegistration */
-            $messageFlowRegistration = $applicationContext->{$registration->getMethodName()}();
-            $messageFlowAnnotations[str_replace("*", ".*", $messageFlowRegistration->getMessageName())][] = $messageFlowRegistration;
-        }
-
-        return new self(MessageFlowMapper::createWith($messageFlowAnnotations));
+        return new self($messageFlowAnnotations);
     }
 
     /**
@@ -99,6 +90,13 @@ class MessageFlowModule implements AnnotationModule
                 ->withOutputMessageChannel(self::INTEGRATION_MESSAGING_CQRS_SPLITTER_TO_ROUTER_BRIDGE)
         );
 
+        foreach ($this->messageFlowMapper->getMessageFlows() as $messageFlowRegistrations) {
+            /** @var MessageFlowRegistration $messageFlowRegistration */
+            foreach ($messageFlowRegistrations as $messageFlowRegistration) {
+                $this->registerChannelIfNeeded($configuration, $messageFlowRegistration);
+            }
+        }
+
         $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(self::INTEGRATION_MESSAGING_CQRS_SPLITTER_TO_ROUTER_BRIDGE));
         $configuration->registerMessageChannel(SimpleMessageChannelBuilder::createDirectMessageChannel(self::INTEGRATION_MESSAGING_CQRS_START_FLOW_CHANNEL));
         $messageFlowRouter = RouterBuilder::createRouterFromObject(self::INTEGRATION_MESSAGING_CQRS_SPLITTER_TO_ROUTER_BRIDGE, new MessageFlowRegistrationRouter(), "routeMessageByRegistration");
@@ -107,6 +105,41 @@ class MessageFlowModule implements AnnotationModule
         ]);
 
         $configuration->registerMessageHandler($messageFlowRouter);
+    }
+
+    /**
+     * @param Configuration $configuration
+     * @param MessageFlowRegistration $messageFlowRegistration
+     * @return void
+     */
+    private function registerChannelIfNeeded(Configuration $configuration, MessageFlowRegistration $messageFlowRegistration): void
+    {
+        if ($messageFlowRegistration->shouldChannelBeRegistered()) {
+            $configuration->registerMessageChannel(
+                $messageFlowRegistration->isSubscribable()
+                    ? SimpleMessageChannelBuilder::createDirectMessageChannel($messageFlowRegistration->getMessageName())
+                    : SimpleMessageChannelBuilder::createPublishSubscribeChannel($messageFlowRegistration->getMessageName())
+            );
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function canHandle($messagingComponent): bool
+    {
+        return $messagingComponent instanceof MessageFlowRegistration;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function registerMessagingComponent(Configuration $configuration, $messageFlowRegistration): void
+    {
+        Assert::isTrue(\assert($messageFlowRegistration instanceof MessageFlowRegistration), "Registering wrong type in " . self::class);
+
+        $this->registerChannelIfNeeded($configuration, $messageFlowRegistration);
+        $this->messageFlowMapper->addRegistration($messageFlowRegistration);
     }
 
     /**
@@ -122,7 +155,7 @@ class MessageFlowModule implements AnnotationModule
      */
     public function getName(): string
     {
-        return "messageFlowModule";
+        return ApplicationContextModule::MODULE_NAME;
     }
 
     /**

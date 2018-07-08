@@ -226,10 +226,12 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
 
     /**
      * @param Configuration $configuration
-     * @param               $interfaceToCall
-     * @param               $handler
-     * @param               $registration
-     * @param               $inputMessageChannelName
+     * @param InterfaceToCall $interfaceToCall
+     * @param CqrsMessageHandlerBuilder $handler
+     * @param AnnotationRegistration $registration
+     * @param string $inputMessageChannelName
+     * @throws InvalidArgumentException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     private function registerChannelAndHandler(Configuration $configuration, InterfaceToCall $interfaceToCall, CqrsMessageHandlerBuilder $handler, AnnotationRegistration $registration, string $inputMessageChannelName): void
     {
@@ -242,11 +244,13 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     }
 
     /**
-     * @param InterfaceToCall                              $interfaceToCall
+     * @param InterfaceToCall $interfaceToCall
      * @param MessageHandlerBuilderWithParameterConverters $messageHandlerBuilderWithParameterConverters
-     * @param AnnotationRegistration                       $annotationRegistration
+     * @param AnnotationRegistration $annotationRegistration
      *
      * @return void
+     * @throws InvalidArgumentException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     private function configureMessageParametersFor(InterfaceToCall $interfaceToCall, MessageHandlerBuilderWithParameterConverters $messageHandlerBuilderWithParameterConverters, AnnotationRegistration $annotationRegistration): void
     {
@@ -272,13 +276,15 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     }
 
     /**
-     * @param AnnotationRegistration    $registration
-     * @param string                    $methodName
+     * @param AnnotationRegistration $registration
+     * @param string $methodName
      * @param CqrsMessageHandlerBuilder $handler
-     * @param array                     $callInterceptorAnnotations
-     * @param bool                      $isPreCallInterceptor
+     * @param array $callInterceptorAnnotations
+     * @param bool $isPreCallInterceptor
      *
      * @return array
+     * @throws InvalidArgumentException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     private function createCallInterceptorsFor(AnnotationRegistration $registration, string $methodName, CqrsMessageHandlerBuilder $handler, array $callInterceptorAnnotations, bool $isPreCallInterceptor): array
     {
@@ -310,11 +316,13 @@ class CqrsMessagingModule implements AnnotationModule, AggregateRepositoryFactor
     }
 
     /**
-     * @param Configuration             $configuration
+     * @param Configuration $configuration
      * @param CqrsMessageHandlerBuilder $handler
-     * @param AnnotationRegistration    $registration
-     * @param InterfaceToCall           $interfaceToCall
-     * @param string                    $inputMessageChannelName
+     * @param AnnotationRegistration $registration
+     * @param InterfaceToCall $interfaceToCall
+     * @param string $inputMessageChannelName
+     * @throws InvalidArgumentException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     private function registerChannelAndQueryHandler(Configuration $configuration, CqrsMessageHandlerBuilder $handler, AnnotationRegistration $registration, InterfaceToCall $interfaceToCall, string $inputMessageChannelName): void
     {

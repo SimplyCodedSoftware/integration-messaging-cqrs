@@ -8,9 +8,9 @@ use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\MessageFlowAnnotati
  * Class ExampleFlowCommand
  * @package Fixture\Annotation\MessageFlow
  * @author  Dariusz Gafka <dgafka.mail@gmail.com>
- * @MessageFlowAnnotation(externalName=ExampleFlowCommand::MESSAGE_NAME, channelName=ExampleFlowCommand::MESSAGE_NAME, autoCreate=true)
+ * @MessageFlowAnnotation(externalName=ExampleFlowCommand::MESSAGE_NAME, channelName=ExampleFlowCommand::MESSAGE_NAME, autoCreate=true, isSubscriable=true)
  */
-class ExampleFlowCommand
+class ExampleFlowWithSubscribableChannelCommand
 {
     public const MESSAGE_NAME = "example.flow";
 }

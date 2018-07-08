@@ -12,26 +12,36 @@ class MessageFlowMapper
     /**
      * @var MessageFlowRegistration[][]
      */
-    private $messageFlowRegistrations;
+    private $messageFlowRegistrations = [];
 
     /**
      * MessageFlowMapper constructor.
      *
-     * @param MessageFlowRegistration[][] $messageFlowRegistrations
+     * @param MessageFlowRegistration[] $messageFlowRegistrations
      */
     private function __construct(array $messageFlowRegistrations)
     {
-        $this->messageFlowRegistrations = $messageFlowRegistrations;
+        foreach ($messageFlowRegistrations as $messageFlowRegistration) {
+            $this->addRegistration($messageFlowRegistration);
+        }
     }
 
     /**
-     * @param MessageFlowRegistration[][] $messageFlowRegistrations
+     * @param MessageFlowRegistration[] $messageFlowRegistrations
      *
      * @return MessageFlowMapper
      */
     public static function createWith(array $messageFlowRegistrations) : self
     {
         return new self($messageFlowRegistrations);
+    }
+
+    /**
+     * @param MessageFlowRegistration $messageFlowRegistration
+     */
+    public function addRegistration(MessageFlowRegistration $messageFlowRegistration) : void
+    {
+        $this->messageFlowRegistrations[str_replace("*", ".*", $messageFlowRegistration->getMessageName())][] = $messageFlowRegistration;
     }
 
     /**
@@ -55,5 +65,13 @@ class MessageFlowMapper
         }
 
         return $messageFlows;
+    }
+
+    /**
+     * @return MessageFlowRegistration[][]
+     */
+    public function getMessageFlows() : array
+    {
+        return $this->messageFlowRegistrations;
     }
 }

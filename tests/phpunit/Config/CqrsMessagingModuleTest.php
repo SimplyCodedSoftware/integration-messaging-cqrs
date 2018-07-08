@@ -60,6 +60,7 @@ class CqrsMessagingModuleTest extends TestCase
 
     /**
      * @return MessagingSystemConfiguration
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     protected function createMessagingSystemConfiguration(): MessagingSystemConfiguration
     {
@@ -67,8 +68,11 @@ class CqrsMessagingModuleTest extends TestCase
     }
 
     /**
-     * @param array         $annotationClassesToRegister
+     * @param array $annotationClassesToRegister
      * @param Configuration $expectedConfiguration
+     * @throws \Doctrine\Common\Annotations\AnnotationException
+     * @throws \ReflectionException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     private function createModuleAndAssertConfiguration(array $annotationClassesToRegister, Configuration $expectedConfiguration): void
     {
@@ -86,6 +90,9 @@ class CqrsMessagingModuleTest extends TestCase
      * @param array $annotationClassesToRegister
      *
      * @return MessagingSystemConfiguration
+     * @throws \Doctrine\Common\Annotations\AnnotationException
+     * @throws \ReflectionException
+     * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     private function prepareConfiguration(array $annotationClassesToRegister): MessagingSystemConfiguration
     {

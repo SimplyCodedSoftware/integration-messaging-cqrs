@@ -3,7 +3,7 @@
 namespace Fixture\Annotation\MessageFlow;
 
 use SimplyCodedSoftware\IntegrationMessaging\Annotation\ApplicationContextAnnotation;
-use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Annotation\MessageFlowComponentAnnotation;
+use SimplyCodedSoftware\IntegrationMessaging\Annotation\MessagingComponentAnnotation;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\MessageFlowRegistration;
 
 /**
@@ -16,10 +16,10 @@ class ExampleMessageFlowWithRegex
 {
     /**
      * @return MessageFlowRegistration
-     * @MessageFlowComponentAnnotation()
+     * @MessagingComponentAnnotation()
      */
-    public function createExternalFlow() : MessageFlowRegistration
+    public function createExternalFlow(): MessageFlowRegistration
     {
-        return MessageFlowRegistration::createExternalFlow("example*", "externalChannelWithRegex");
+        return MessageFlowRegistration::createExternalFlow("example*", "externalChannelWithRegex", false, false);
     }
 }
