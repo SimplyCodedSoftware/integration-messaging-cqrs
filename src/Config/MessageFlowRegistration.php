@@ -52,27 +52,46 @@ class MessageFlowRegistration
      * @param string $messageName
      * @param string $messageClassName
      * @param string $channelName
-     * @param bool $isChannelAutoRegisterd
+     * @return MessageFlowRegistration
+     */
+    public static function createLocalFlow(string $messageName, string $messageClassName, string $channelName) : self
+    {
+        return new self($messageName, $messageClassName, $channelName, false, false);
+    }
+
+    /**
+     * @param string $messageName
+     * @param string $messageClassName
+     * @param string $channelName
      * @param bool $isSubscribable
      *
      * @return MessageFlowRegistration
      */
-    public static function createLocalFlow(string $messageName, string $messageClassName, string $channelName, bool $isChannelAutoRegisterd, bool $isSubscribable) : self
+    public static function createLocalFlowWithAutoRegistration(string $messageName, string $messageClassName, string $channelName, bool $isSubscribable) : self
     {
-        return new self($messageName, $messageClassName, $channelName, $isChannelAutoRegisterd, $isSubscribable);
+        return new self($messageName, $messageClassName, $channelName, true, $isSubscribable);
     }
 
     /**
      * @param string $messageName
      * @param string $channelName
      *
-     * @param bool $isAutoRegistered
+     * @return MessageFlowRegistration
+     */
+    public static function createExternalFlow(string $messageName, string $channelName) : self
+    {
+        return new self($messageName, "", $channelName, false, false);
+    }
+
+    /**
+     * @param string $messageName
+     * @param string $channelName
      * @param bool $isSubscribable
      * @return MessageFlowRegistration
      */
-    public static function createExternalFlow(string $messageName, string $channelName, bool $isAutoRegistered, bool $isSubscribable) : self
+    public static function createExternalFlowWithAutoRegistration(string $messageName, string $channelName, bool $isSubscribable) : self
     {
-        return new self($messageName, "", $channelName, $isAutoRegistered, $isSubscribable);
+        return new self($messageName, "", $channelName, true, $isSubscribable);
     }
 
     /**

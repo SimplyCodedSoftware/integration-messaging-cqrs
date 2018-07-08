@@ -64,13 +64,20 @@ class MessageFlowModule implements AnnotationModule, ApplicationContextModuleExt
         foreach ($annotationRegistrationService->getAllClassesWithAnnotation(MessageFlowAnnotation::class) as $messageFlowClass) {
             /** @var MessageFlowAnnotation $annotation */
             $annotation = $annotationRegistrationService->getAnnotationForClass($messageFlowClass, MessageFlowAnnotation::class);
-            $messageFlowAnnotations->addRegistration(MessageFlowRegistration::createLocalFlow(
-                $annotation->externalName,
-                $messageFlowClass,
-                $annotation->channelName,
-                $annotation->autoCreate,
-                $annotation->isSubscriable
-            ));
+            if ($annotation->autoCreate) {
+                $messageFlowAnnotations->addRegistration(MessageFlowRegistration::createLocalFlowWithAutoRegistration(
+                    $annotation->externalName,
+                    $messageFlowClass,
+                    $annotation->channelName,
+                    $annotation->isSubscriable
+                ));
+            }else {
+                $messageFlowAnnotations->addRegistration(MessageFlowRegistration::createLocalFlow(
+                    $annotation->externalName,
+                    $messageFlowClass,
+                    $annotation->channelName
+                ));
+            }
         }
 
         return new self($messageFlowAnnotations);

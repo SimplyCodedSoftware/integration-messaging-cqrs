@@ -20,6 +20,6 @@ class ExampleMessageFlowApplicationContextForExternalFlow
      */
     public function createExternalFlow(): MessageFlowRegistration
     {
-        return MessageFlowRegistration::createExternalFlow(ExampleFlowCommandWithCustomChannel::MESSAGE_NAME, "externalChannel", false, false);
+        return MessageFlowRegistration::createExternalFlow(ExampleFlowCommandWithCustomChannel::MESSAGE_NAME, "externalChannel");
     }
 }

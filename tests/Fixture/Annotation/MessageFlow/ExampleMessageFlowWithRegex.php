@@ -20,6 +20,6 @@ class ExampleMessageFlowWithRegex
      */
     public function createExternalFlow(): MessageFlowRegistration
     {
-        return MessageFlowRegistration::createExternalFlow("example*", "externalChannelWithRegex", false, false);
+        return MessageFlowRegistration::createExternalFlow("example*", "externalChannelWithRegex");
     }
 }
