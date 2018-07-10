@@ -126,8 +126,8 @@ class MessageFlowModule implements AnnotationModule, ApplicationContextModuleExt
         if ($messageFlowRegistration->shouldChannelBeRegistered()) {
             $configuration->registerMessageChannel(
                 $messageFlowRegistration->isSubscribable()
-                    ? SimpleMessageChannelBuilder::createDirectMessageChannel($messageFlowRegistration->getMessageName())
-                    : SimpleMessageChannelBuilder::createPublishSubscribeChannel($messageFlowRegistration->getMessageName())
+                    ? SimpleMessageChannelBuilder::createPublishSubscribeChannel($messageFlowRegistration->getMessageName())
+                    : SimpleMessageChannelBuilder::createDirectMessageChannel($messageFlowRegistration->getMessageName())
             );
         }
     }
