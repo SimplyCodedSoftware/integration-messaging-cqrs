@@ -123,6 +123,7 @@ class MessageFlowModule implements AnnotationModule, ApplicationContextModuleExt
      */
     private function registerChannelIfNeeded(Configuration $configuration, MessageFlowRegistration $messageFlowRegistration): void
     {
+
         if ($messageFlowRegistration->shouldChannelBeRegistered()) {
             $configuration->registerMessageChannel(
                 $messageFlowRegistration->isSubscribable()
@@ -130,6 +131,7 @@ class MessageFlowModule implements AnnotationModule, ApplicationContextModuleExt
                     : SimpleMessageChannelBuilder::createDirectMessageChannel($messageFlowRegistration->getMessageName())
             );
         }
+
     }
 
     /**
