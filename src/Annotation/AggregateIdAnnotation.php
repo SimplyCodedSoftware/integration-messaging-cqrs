@@ -13,5 +13,8 @@ use Doctrine\Common\Annotations\Annotation\Target;
  */
 class AggregateIdAnnotation
 {
-
+    /**
+     * @var string
+     */
+    public $name = "";
 }

@@ -49,9 +49,10 @@ class InMemoryAggregateRepository implements AggregateRepository
     /**
      * @inheritDoc
      */
-    public function findBy(string $aggregateId)
+    public function findBy(array $identifiers)
     {
-        if (!array_key_exists($aggregateId, $this->aggregates)) {
+        $aggregateId = $this->getAggregateId($identifiers);
+        if (!$aggregateId || !array_key_exists($aggregateId, $this->aggregates)) {
             throw AggregateNotFoundException::create("Aggregate with id {$aggregateId} was not found");
         }
 
@@ -61,10 +62,10 @@ class InMemoryAggregateRepository implements AggregateRepository
     /**
      * @inheritDoc
      */
-    public function findWithLockingBy(string $aggregateId, int $expectedVersion)
+    public function findWithLockingBy(array $identifiers, int $expectedVersion)
     {
         /** @var VersionAggregate $aggregate */
-        $aggregate =  $this->findBy($aggregateId);
+        $aggregate =  $this->findBy($identifiers);
 
         if ($expectedVersion != $aggregate->getVersion()) {
             throw AggregateVersionMismatchException::create("Expected aggregate version {$expectedVersion} got {$aggregate->getVersion()}");
@@ -79,5 +80,17 @@ class InMemoryAggregateRepository implements AggregateRepository
     public function save($aggregate): void
     {
         $this->aggregates[$aggregate->getId()] = $aggregate;
+    }
+
+    /**
+     * @param array $identifiers
+     *
+     * @return mixed|null
+     */
+    private function getAggregateId(array $identifiers)
+    {
+        $aggregateId = !empty($identifiers) ? array_shift($identifiers) : null;
+
+        return $aggregateId;
     }
 }

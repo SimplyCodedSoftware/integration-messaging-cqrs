@@ -6,7 +6,9 @@ use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Persistence\ObjectRepository;
 use Doctrine\DBAL\LockMode;
+use Doctrine\ORM\EntityRepository;
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\AggregateRepository;
+use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
 
 /**
  * Class EntityManagerAggregateRepository
@@ -21,7 +23,7 @@ class DoctrineAggregateRepositoryAdapter implements AggregateRepository
      */
     private $aggregateClassName;
     /**
-     * @var ManagerRegistry
+     * @var ManagerRegistry|EntityRepository
      */
     private $managerRegistry;
 
@@ -40,17 +42,21 @@ class DoctrineAggregateRepositoryAdapter implements AggregateRepository
     /**
      * @inheritDoc
      */
-    public function findBy(string $aggregateId)
+    public function findBy(array $identifiers)
     {
-        return $this->getRepository()->find($aggregateId);
+        return $this->getRepository()->findOneBy($identifiers);
     }
 
     /**
      * @inheritDoc
      */
-    public function findWithLockingBy(string $aggregateId, int $expectedVersion)
+    public function findWithLockingBy(array $identifiers, int $expectedVersion)
     {
-        return $this->getRepository()->find($aggregateId, LockMode::OPTIMISTIC, $expectedVersion);
+        if (count($identifiers) != 1) {
+            throw new InvalidArgumentException("Doctrine does not support multiple identifiers for locking mode");
+        }
+
+        return $this->getRepository()->find($identifiers[0], LockMode::OPTIMISTIC, $expectedVersion);
     }
 
     /**

@@ -10,19 +10,19 @@ namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs;
 interface AggregateRepository
 {
     /**
-     * @param string $aggregateId
+     * @param array $identifiers
+     *
      * @return object|null
-     * @throws AggregateNotFoundException
      */
-    public function findBy(string $aggregateId);
+    public function findBy(array $identifiers);
 
     /**
-     * @param string $aggregateId
-     * @param int $expectedVersion
+     * @param array $identifiers
+     * @param int   $expectedVersion
+     *
      * @return object|null
-     * @throws AggregateVersionMismatchException|AggregateNotFoundException
      */
-    public function findWithLockingBy(string $aggregateId, int $expectedVersion);
+    public function findWithLockingBy(array $identifiers, int $expectedVersion);
 
     /**
      * @param object $aggregate

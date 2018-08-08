@@ -98,6 +98,6 @@ class InMemoryOrderAggregateRepositoryConstructor implements AggregateRepository
 
     public function findBy(int $id) : ?Order
     {
-        return $this->orderAggregateRepository->findBy($id);
+        return $this->orderAggregateRepository->findBy([$id]);
     }
 }

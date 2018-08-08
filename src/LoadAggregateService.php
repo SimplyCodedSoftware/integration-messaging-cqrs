@@ -4,6 +4,7 @@ namespace SimplyCodedSoftware\IntegrationMessaging\Cqrs;
 
 use SimplyCodedSoftware\IntegrationMessaging\Cqrs\Config\CqrsMessagingModule;
 use SimplyCodedSoftware\IntegrationMessaging\Message;
+use SimplyCodedSoftware\IntegrationMessaging\Support\InvalidArgumentException;
 use SimplyCodedSoftware\IntegrationMessaging\Support\MessageBuilder;
 
 /**
@@ -51,17 +52,21 @@ class LoadAggregateService
      *
      * @return Message
      * @throws AggregateNotFoundException
+     * @throws \ReflectionException
      * @throws \SimplyCodedSoftware\IntegrationMessaging\MessagingException
      */
     public function load(Message $message) : Message
     {
         $commandReflection = new \ReflectionClass($message->getPayload());
-        $aggregateId       = "";
+        $aggregateIdentifiers = [];
         $expectedVersion   = null;
         foreach ($commandReflection->getProperties() as $property) {
             if (preg_match("*AggregateIdAnnotation*", $property->getDocComment())) {
                 $property->setAccessible(true);
-                $aggregateId = (string)$property->getValue($message->getPayload());
+                $value = (string)$property->getValue($message->getPayload());
+                if ($value) {
+                    $aggregateIdentifiers[$property->getName()] = $value;
+                }
             }
             if (preg_match("*AggregateExpectedVersionAnnotation*", $property->getDocComment())) {
                 $property->setAccessible(true);
@@ -71,13 +76,13 @@ class LoadAggregateService
 
         $aggregate = null;
         if (!$this->isFactoryMethod) {
-            if (!$aggregateId) {
-                throw AggregateNotFoundException::create("There is no aggregate id to search for found. Are you sure you defined AggregateId Annotation or isn't aggregateId null?");
+            if (!$aggregateIdentifiers) {
+                throw AggregateNotFoundException::create("There is no aggregate id to search for found. Are you sure you defined AggregateId Annotation or are not aggregateIdentifiers null?");
             }
 
             $aggregate = is_null($expectedVersion)
-                ? $this->aggregateRepository->findBy($aggregateId)
-                : $this->aggregateRepository->findWithLockingBy($aggregateId, $expectedVersion);
+                ? $this->aggregateRepository->findBy($aggregateIdentifiers)
+                : $this->aggregateRepository->findWithLockingBy($aggregateIdentifiers, $expectedVersion);
         }
 
         $messageBuilder = MessageBuilder::fromMessage($message);
@@ -92,7 +97,7 @@ class LoadAggregateService
             ->setHeader(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_CLASS_NAME_HEADER, $this->aggregateClassName)
             ->setHeader(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_METHOD_HEADER, $this->aggregateMethod)
             ->setHeader(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_REPOSITORY_HEADER, $this->aggregateRepository)
-            ->setHeader(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_ID_HEADER, $aggregateId)
+            ->setHeader(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_ID_HEADER, $aggregateIdentifiers)
             ->setHeader(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_IS_FACTORY_METHOD_HEADER, $this->isFactoryMethod)
             ->setHeader(CqrsMessagingModule::INTEGRATION_MESSAGING_CQRS_AGGREGATE_MESSAGE_HEADER, $message->getPayload())
             ->build();

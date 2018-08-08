@@ -2,6 +2,8 @@
 
 namespace Test\SimplyCodedSoftware\IntegrationMessaging\Cqrs;
 
+use Fixture\AggregateWithMultipleIds\MultipleIdsAggregateRepositoryExample;
+use Fixture\AggregateWithMultipleIds\VerificationExample;
 use Fixture\Annotation\QueryHandler\ServiceQueryHandlerWithAdditionalParameter;
 use Fixture\Annotation\QueryHandler\SomeQuery;
 use Fixture\CommandHandler\Aggregate\ChangeAmountInterceptor;
@@ -408,6 +410,9 @@ class CqrsMessageHandlerBuilderTest extends TestCase
         $this->assertEquals(8, $shop->getProductsAmount());
     }
 
+    /**
+     * @throws MessagingException
+     */
     public function test_calling_post_interceptor_with_aggregate_query_handler()
     {
         $newAmount             = 100;
