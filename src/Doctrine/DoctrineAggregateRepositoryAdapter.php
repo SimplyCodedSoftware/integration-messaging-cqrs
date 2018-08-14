@@ -44,7 +44,11 @@ class DoctrineAggregateRepositoryAdapter implements AggregateRepository
      */
     public function findBy(array $identifiers)
     {
-        return $this->getRepository()->findOneBy($identifiers);
+        if ($this->hasLessThanOneIdentifier($identifiers)) {
+            throw new InvalidArgumentException("No enough identifier to search for aggregate was provided");
+        }
+
+        return $this->getRepository()->find($identifiers);
     }
 
     /**
@@ -52,11 +56,11 @@ class DoctrineAggregateRepositoryAdapter implements AggregateRepository
      */
     public function findWithLockingBy(array $identifiers, int $expectedVersion)
     {
-        if (count($identifiers) != 1) {
-            throw new InvalidArgumentException("Doctrine does not support multiple identifiers for locking mode");
+        if ($this->hasLessThanOneIdentifier($identifiers)) {
+            throw new InvalidArgumentException("No enough identifier to search for aggregate was provided");
         }
 
-        return $this->getRepository()->find($identifiers[0], LockMode::OPTIMISTIC, $expectedVersion);
+        return $this->getRepository()->find($identifiers, LockMode::OPTIMISTIC, $expectedVersion);
     }
 
     /**
@@ -81,5 +85,15 @@ class DoctrineAggregateRepositoryAdapter implements AggregateRepository
     private function getManager() : ObjectManager
     {
         return $this->managerRegistry->getManagerForClass($this->aggregateClassName);
+    }
+
+    /**
+     * @param array $identifiers
+     *
+     * @return bool
+     */
+    private function hasLessThanOneIdentifier(array $identifiers): bool
+    {
+        return count($identifiers) < 1;
     }
 }
